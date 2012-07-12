@@ -23,6 +23,9 @@
 char* MENU_HEADERS[] = { NULL };
 
 char* MENU_ITEMS[] = { "reboot system now",
+#ifdef RECOVERY_MULTI_BOOT
+                       "select boot rom",
+#endif
                        "install zip from sdcard",
                        "wipe data/factory reset",
                        "wipe cache partition",
@@ -47,5 +50,20 @@ int device_perform_action(int which) {
 }
 
 int device_wipe_data() {
+    return 0;
+}
+
+int restore_preinstall() {
+    //__system("mount -t ext4 /dev/block/mmcblk0p12 /preload");
+    //mkdir("/data/app", 0771);
+    //chown("/data/app", 1000, 1000);	
+    //__system("cp /preload/app/* /data/app/");
+    //__system("chmod 644 /data/app/*");
+    //__system("chown system.system /data/app/*");
+
+    //__system("cp /preload/pre_video/Color_SuperAMOLEDPlus-30mb.mp4 /sdcard/");
+    //__system("chmod 644 /sdcard/Color_SuperAMOLEDPlus-30mb.mp4");
+    //__system("chown system.system /sdcard/Color_SuperAMOLEDPlus-30mb.mp4");
+    //__system("umount /preload");
     return 0;
 }

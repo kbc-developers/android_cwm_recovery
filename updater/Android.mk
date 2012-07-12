@@ -5,7 +5,8 @@ LOCAL_PATH := $(call my-dir)
 updater_src_files := \
 	install.c \
 	../mounts.c \
-	updater.c
+	updater.c \
+	../recovery_multi.c
 
 #
 # Build a statically-linked binary to include in OTA packages
@@ -23,6 +24,9 @@ ifeq ($(TARGET_USERIMAGES_USE_EXT4), true)
 LOCAL_CFLAGS += -DUSE_EXT4
 LOCAL_C_INCLUDES += system/extras/ext4_utils
 LOCAL_STATIC_LIBRARIES += libext4_utils libz
+endif
+ifeq ($(RECOVERY_MULTI_BOOT), true)
+LOCAL_CFLAGS += -DRECOVERY_MULTI_BOOT
 endif
 
 LOCAL_STATIC_LIBRARIES += libflashutils libmtdutils libmmcutils libbmlutils

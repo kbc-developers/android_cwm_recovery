@@ -17,7 +17,7 @@ int
 do_nandroid_restore();
 
 void
-show_nandroid_restore_menu(const char* path);
+show_nandroid_restore_menu(const char* path, int restore_kernel);
 
 void
 show_nandroid_advanced_restore_menu(const char* path);

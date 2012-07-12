@@ -44,7 +44,11 @@
 
 void nandroid_generate_timestamp_path(const char* backup_path)
 {
+#ifdef RECOVERY_TZ_JPN
+    time_t t = time(NULL) + (60 * 60 * 9); // add 9 hours
+#else
     time_t t = time(NULL);
+#endif
     struct tm *tmp = localtime(&t);
     if (tmp == NULL)
     {
@@ -86,7 +90,20 @@ static void yaffs_callback(const char* filename)
 static void compute_directory_stats(const char* directory)
 {
     char tmp[PATH_MAX];
+#ifdef RECOVERY_MULTI_BOOT
+    if (strcmp(directory, "/data") == 0) {
+        char link_path[PATH_MAX] = { 0 };
+        ssize_t len = readlink(directory, link_path, sizeof(link_path));
+        if (len > 0)
+            sprintf(tmp, "find %s | wc -l > /tmp/dircount", link_path);
+        else
+            sprintf(tmp, "find %s | wc -l > /tmp/dircount", directory);
+    } else {
+        sprintf(tmp, "find %s | wc -l > /tmp/dircount", directory);
+    }
+#else
     sprintf(tmp, "find %s | wc -l > /tmp/dircount", directory);
+#endif
     __system(tmp);
     char count_text[100];
     FILE* f = fopen("/tmp/dircount", "r");
@@ -109,8 +126,14 @@ static int mkyaffs2image_wrapper(const char* backup_path, const char* backup_fil
 
 static int tar_compress_wrapper(const char* backup_path, const char* backup_file_image, int callback) {
     char tmp[PATH_MAX];
+#ifdef RECOVERY_MULTI_BOOT
+    if (strcmp(backup_path, "/data") == 0) {
+        sprintf(tmp, "cd / ; tar cvf %s.tar data/*", backup_file_image);
+    } else
+#endif
     sprintf(tmp, "cd $(dirname %s) ; touch %s.tar ; (tar cv %s $(basename %s) | split -a 1 -b 1000000000 /proc/self/fd/0 %s.tar.) 2> /proc/self/fd/1 ; exit $?", backup_path, backup_file_image, strcmp(backup_path, "/data") == 0 && is_data_media() ? "--exclude 'media'" : "", backup_path, backup_file_image);
 
+    LOGI("*** cmd=%s\n", tmp);
     FILE *fp = __popen(tmp, "r");
     if (fp == NULL) {
         ui_print("Unable to execute tar.\n");
@@ -127,6 +150,11 @@ static int tar_compress_wrapper(const char* backup_path, const char* backup_file
 }
 
 static nandroid_backup_handler get_backup_handler(const char *backup_path) {
+#ifdef RECOVERY_MULTI_BOOT
+    if (strcmp(backup_path, "/data") == 0) {
+        return tar_compress_wrapper;
+    }
+#endif
     Volume *v = volume_for_path(backup_path);
     if (v == NULL) {
         ui_print("Unable to find volume.\n");
@@ -173,7 +201,16 @@ int nandroid_backup_partition_extended(const char* backup_path, const char* moun
     compute_directory_stats(mount_point);
     char tmp[PATH_MAX];
     scan_mounted_volumes();
-    Volume *v = volume_for_path(mount_point);
+    Volume *v;
+#ifdef RECOVERY_MULTI_BOOT
+    if (strcmp(mount_point, "/data") == 0) {
+        v = volume_for_path("/data_dev");
+    } else {
+        v = volume_for_path(mount_point);
+    }
+#else
+    v = volume_for_path(mount_point);
+#endif
     MountedVolume *mv = NULL;
     if (v != NULL)
         mv = find_mounted_volume_by_mount_point(v->mount_point);
@@ -274,7 +311,11 @@ int nandroid_backup(const char* backup_path)
     if (0 != (ret = nandroid_backup_partition(backup_path, "/system")))
         return ret;
 
+#ifdef RECOVERY_MULTI_BOOT
+    if (0 != (ret = nandroid_backup_partition_extended(backup_path, "/data", 0)))
+#else
     if (0 != (ret = nandroid_backup_partition(backup_path, "/data")))
+#endif
         return ret;
 
     if (has_datadata()) {
@@ -294,7 +335,7 @@ int nandroid_backup(const char* backup_path)
 
     if (0 != (ret = nandroid_backup_partition_extended(backup_path, "/cache", 0)))
         return ret;
-
+#ifdef RECOVERY_HAVE_SD_EXT
     vol = volume_for_path("/sd-ext");
     if (vol == NULL || 0 != stat(vol->device, &s))
     {
@@ -307,7 +348,7 @@ int nandroid_backup(const char* backup_path)
         else if (0 != (ret = nandroid_backup_partition(backup_path, "/sd-ext")))
             return ret;
     }
-
+#endif
     ui_print("Generating md5 sum...\n");
     sprintf(tmp, "nandroid-md5.sh %s", backup_path);
     if (0 != (ret = __system(tmp))) {
@@ -569,7 +610,11 @@ int nandroid_restore(const char* backup_path, int restore_boot, int restore_syst
     if (restore_system && 0 != (ret = nandroid_restore_partition(backup_path, "/system")))
         return ret;
 
+#ifdef RECOVERY_MULTI_BOOT
+    if (restore_data && 0 != (ret = nandroid_restore_partition_extended(backup_path, "/data", 0)))
+#else
     if (restore_data && 0 != (ret = nandroid_restore_partition(backup_path, "/data")))
+#endif
         return ret;
         
     if (has_datadata()) {
@@ -582,10 +627,10 @@ int nandroid_restore(const char* backup_path, int restore_boot, int restore_syst
 
     if (restore_cache && 0 != (ret = nandroid_restore_partition_extended(backup_path, "/cache", 0)))
         return ret;
-
+#ifdef RECOVERY_HAVE_SD_EXT
     if (restore_sdext && 0 != (ret = nandroid_restore_partition(backup_path, "/sd-ext")))
         return ret;
-
+#endif
     sync();
     ui_set_background(BACKGROUND_ICON_NONE);
     ui_reset_progress();

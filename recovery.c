@@ -127,6 +127,10 @@ extern UIParameters ui_parameters;    // from ui.c
 
 static const int MAX_ARG_LENGTH = 4096;
 static const int MAX_ARGS = 100;
+#ifdef RECOVERY_MULTI_BOOT
+char TARGET_ROM[100];
+int is_boot_error = 0;
+#endif
 
 // open a given path, mounting partitions as necessary
 FILE*
@@ -405,6 +409,9 @@ copy_sideloaded_package(const char* original_path) {
 static char**
 prepend_title(char** headers) {
     char* title[] = { EXPAND(RECOVERY_VERSION),
+#ifdef RECOVERY_MULTI_BOOT
+                      TARGET_ROM,
+#endif
                       "",
                       NULL };
 
@@ -680,10 +687,55 @@ wipe_data(int confirm) {
     if (has_datadata()) {
         erase_volume("/datadata");
     }
+#ifdef RECOVERY_HAVE_SD_EXT
     erase_volume("/sd-ext");
+#endif
     erase_volume("/sdcard/.android_secure");
     ui_print("Data wipe complete.\n");
 }
+
+#ifdef RECOVERY_MULTI_BOOT
+static void
+select_boot_rom(int confirm) {
+    int chosen_item = 0;
+    char cmd[100];
+    if (confirm) {
+        static char** title_headers = NULL;
+
+        if (title_headers == NULL) {
+            char* headers[] = { "Seelct boot rom?",
+                                "  THIS CAN NOT BE UNDONE.",
+                                "",
+                                NULL };
+            title_headers = prepend_title((const char**)headers);
+        }
+
+        char* items[] = { " ROM0",
+                          " ROM1",
+                          " ROM2",
+                          " ROM3",
+                          " ROM4",
+                          " ROM5",
+                          " ROM6",
+                          " ROM7",
+                          NULL };
+
+        chosen_item = get_menu_selection(title_headers, items, 1, 0);
+        if (chosen_item > 7 || chosen_item == GO_BACK) {
+            return;
+        }
+    }
+
+    if (0 != ensure_path_mounted("/xdata"))
+		return;
+
+    __system("mv /xdata/mbs.conf /xdata/mbs.conf.old");
+    sprintf(cmd, "sed -e \"s/mbs\\.boot\\.rom=.*$/mbs\\.boot\\.rom=%d/g\" /xdata/mbs.conf.old > /xdata/mbs.conf", chosen_item);
+    __system(cmd);
+    ui_print("\n-- Select ROM%d...\n", chosen_item);
+    ensure_path_unmounted("/xdata");
+}
+#endif // RECOVERY_MULTI_BOOT
 
 static void
 prompt_and_wait() {
@@ -703,11 +755,31 @@ prompt_and_wait() {
         // statement below.
         chosen_item = device_perform_action(chosen_item);
 
-        int status;
+#ifdef RECOVERY_MULTI_BOOT
+        if (is_boot_error &&
+            (chosen_item == ITEM_WIPE_DATA ||
+             chosen_item == ITEM_WIPE_CACHE ||
+             chosen_item == ITEM_APPLY_SDCARD ||
+             chosen_item == ITEM_NANDROID ||
+             chosen_item == ITEM_PARTITION ||
+             chosen_item == ITEM_ADVANCED)
+           ) {
+            ui_print("Please correct the errors mbs.conf\n");
+            continue;
+        }
+#endif
+
         switch (chosen_item) {
             case ITEM_REBOOT:
                 poweroff=0;
                 return;
+
+#ifdef RECOVERY_MULTI_BOOT
+            case ITEM_BOOT_ROM:
+                select_boot_rom(ui_text_visible());
+                if (!ui_text_visible()) return;
+                break;
+#endif
 
             case ITEM_WIPE_DATA:
                 wipe_data(ui_text_visible());
@@ -774,16 +846,52 @@ main(int argc, char **argv) {
             return nandroid_main(argc, argv);
         if (strstr(argv[0], "reboot"))
             return reboot_main(argc, argv);
-#ifdef BOARD_RECOVERY_HANDLES_MOUNT
-        if (strstr(argv[0], "mount") && argc == 2 && !strstr(argv[0], "umount"))
-        {
-            load_volume_table();
-            return ensure_path_mounted(argv[1]);
+//#ifdef BOARD_RECOVERY_HANDLES_MOUNT
+#ifdef RECOVERY_MULTI_BOOT
+        if (strstr(argv[0], "umount")) {
+            if (argc > 1) {
+                int i, chg_data = 0;
+                for (i = 1; i < argc; i++) {
+                    if (strcmp(argv[i], "/data") == 0) {
+                        chg_data = 1;
+                        break;
+                    }
+                }
+                if (chg_data) {
+                    return __system("umount /data_dev");
+                }
+            }
+        }
+        if (strstr(argv[0], "mount") && !strstr(argv[0], "umount")) {
+            if (argc > 1) {
+                int i, chg_system = 0, chg_data = 0;
+                for (i = 1; i < argc; i++) {
+                    if (strstr(argv[i], "mmcblk0p1") &&
+                        !strstr(argv[i], "mmcblk0p10") &&
+                        !strstr(argv[i], "mmcblk0p11") &&
+                        !strstr(argv[i], "mmcblk0p12")) {
+                        return __system("mount");
+                    }
+                }
+                for (i = 1; i < argc; i++) {
+                    if (strcmp(argv[i], "/system") == 0) {
+                        chg_system = (argc != 2) ? 1 : 0;
+                        break;
+                    } else if (strcmp(argv[i], "/data") == 0) {
+                        chg_data = 1;
+                        break;
+                    }
+                }
+                if (chg_system) {
+                    return __system("mount /system");
+                } else if (chg_data) {
+                    return __system("mount /data_dev");
+                }
+            }
         }
 #endif
-        if (strstr(argv[0], "poweroff")){
+        if (strstr(argv[0], "poweroff"))
             return reboot_main(argc, argv);
-        }
         if (strstr(argv[0], "setprop"))
             return setprop_main(argc, argv);
         return busybox_driver(argc, argv);
@@ -791,7 +899,11 @@ main(int argc, char **argv) {
     __system("/sbin/postrecoveryboot.sh");
 
     int is_user_initiated_recovery = 0;
+#ifdef RECOVERY_TZ_JPN
+    time_t start = time(NULL) + (60 * 60 * 9); // add 9 hours
+#else
     time_t start = time(NULL);
+#endif
 
     // If these fail, there's not really anywhere to complain...
     freopen(TEMPORARY_LOG_FILE, "a", stdout); setbuf(stdout, NULL);
@@ -801,6 +913,55 @@ main(int argc, char **argv) {
     device_ui_init(&ui_parameters);
     ui_init();
     ui_print(EXPAND(RECOVERY_VERSION)"\n");
+
+#ifdef RECOVERY_MULTI_BOOT
+    char romId[4] = { 0 };
+    FILE* fp = fopen("/mbs/stat/bootrom", "rb");
+    if (fp) {
+        fread(&romId, 1, 4, fp);
+        fclose(fp);
+        sprintf(TARGET_ROM, "TARGET ROM%s", romId);
+    } else {
+        ui_print("error: not found /mbs/stat/bootrom\n");
+        is_boot_error = 1;
+    }
+
+    static char sysDevice[PATH_MAX] = { 0 };
+    fp = fopen("/mbs/stat/system_device", "rb");
+    if (fp) {
+        fseek(fp, 0, SEEK_END);
+        size_t length = ftell(fp);
+        if (length > 0) {
+            fseek(fp, 0L, SEEK_SET);
+            fread(sysDevice, 1, length, fp);
+            fclose(fp);
+            setenv("SYSTEM_DEVICE", sysDevice, 1);
+        } else {
+            ui_print("fatal err: not found system devce path\n");
+            is_boot_error = 1;
+        }
+    } else {
+        ui_print("error: not found /mbs/stat/system_device\n");
+        is_boot_error = 1;
+    }
+#endif
+
+#ifdef RECOVERY_MULTI_BOOT
+    {
+        char msg[100] = { 0 };
+        FILE* fp = fopen("/mbs/stat/mbs.err", "rb");
+        if (fp) {
+            fseek(fp, 0, SEEK_END);
+            size_t length = ftell(fp);
+            fseek(fp, 0L, SEEK_SET);
+            fread(msg, 1, length, fp);
+            fclose(fp);
+            ui_print("boot err: %s\n", msg);
+            is_boot_error = 1;
+        }
+    }
+#endif
+
     load_volume_table();
     process_volumes();
     LOGI("Processing arguments.\n");
@@ -831,6 +992,9 @@ main(int argc, char **argv) {
         }
     }
 
+    // update package force null
+    update_package = NULL;
+
     LOGI("device_recovery_start()\n");
     device_recovery_start();
 
@@ -858,6 +1022,12 @@ main(int argc, char **argv) {
 
     property_list(print_property, NULL);
     printf("\n");
+
+	/** force umount /system
+     * uncertainty in timing of umount reocvery.rc,
+     * run the umount when the recovery initialize completed.
+     */
+    ensure_path_unmounted("/system");
 
     int status = INSTALL_SUCCESS;
 
@@ -907,8 +1077,10 @@ main(int argc, char **argv) {
         prompt_and_wait();
     }
 
+#if 0 // galaxys3 don't support this feature
     // If there is a radio image pending, reboot now to install it.
     maybe_install_firmware_update(send_intent);
+#endif
 
     // Otherwise, get ready to boot the main system...
     finish_recovery(send_intent);

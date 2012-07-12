@@ -31,6 +31,9 @@
 #include "flashutils/flashutils.h"
 #include "extendedcommands.h"
 
+extern int multi_mount(
+    const char* device, const char* mount_point, const char* fs_type, const char* fs_options);
+
 int num_volumes;
 Volume* device_volumes;
 
@@ -112,6 +115,36 @@ void load_volume_table() {
         char* device = strtok(NULL, " \t\n");
         // lines may optionally have a second device, to use if
         // mounting the first one fails.
+#ifdef RECOVERY_MULTI_BOOT
+        char* fs_options = strtok(NULL, " \t\n");
+        // lines may optionally have a second device, to use if
+        // mounting the first one fails.
+        char* device2 = strtok(NULL, " \t\n");
+        char* fs_type2 = strtok(NULL, " \t\n");
+        char* fs_options2 = strtok(NULL, " \t\n");
+
+        if (mount_point && fs_type && device) {
+            while (num_volumes >= alloc) {
+                alloc *= 2;
+                device_volumes = realloc(device_volumes, alloc*sizeof(Volume));
+            }
+            device_volumes[num_volumes].mount_point = strdup(mount_point);
+            device_volumes[num_volumes].fs_type = !is_null(fs_type2) ? strdup(fs_type2) : strdup(fs_type);
+            device_volumes[num_volumes].device = strdup(device);
+            device_volumes[num_volumes].device2 =
+                !is_null(device2) ? strdup(device2) : NULL;
+            device_volumes[num_volumes].fs_type2 = !is_null(fs_type2) ? strdup(fs_type) : NULL;
+
+            if (!is_null(fs_type2)) {
+                device_volumes[num_volumes].fs_options2 = dupe_string(fs_options);
+                device_volumes[num_volumes].fs_options = dupe_string(fs_options2);
+            }
+            else {
+                device_volumes[num_volumes].fs_options2 = NULL;
+                device_volumes[num_volumes].fs_options = dupe_string(fs_options);
+            }
+            ++num_volumes;
+#else
         char* options = NULL;
         char* device2 = strtok(NULL, " \t\n");
         if (device2) {
@@ -145,6 +178,7 @@ void load_volume_table() {
             } else {
                 ++num_volumes;
             }
+#endif
         } else {
             LOGE("skipping malformed recovery.fstab line: %s\n", original);
         }
@@ -180,6 +214,11 @@ int try_mount(const char* device, const char* mount_point, const char* fs_type, 
     if (device == NULL || mount_point == NULL || fs_type == NULL)
         return -1;
     int ret = 0;
+#ifdef RECOVERY_MULTI_BOOT
+    ret = multi_mount(device, mount_point, fs_type, fs_options);
+    if (ret == 0)
+        return 0;
+#endif
     if (fs_options == NULL) {
         ret = mount(device, mount_point, fs_type,
                        MS_NOATIME | MS_NODEV | MS_NODIRATIME, "");
@@ -230,6 +269,12 @@ int ensure_path_mounted(const char* path) {
 int ensure_path_mounted_at_mount_point(const char* path, const char* mount_point) {
     Volume* v = volume_for_path(path);
     if (v == NULL) {
+#ifdef RECOVERY_MULTI_BOOT
+        if (strcmp(path, "/data") == 0) {
+            __system("mount /data");
+            return 0;
+        }
+#endif
         LOGE("unknown volume for path [%s]\n", path);
         return -1;
     }
@@ -308,6 +353,12 @@ int ensure_path_unmounted(const char* path) {
 
     Volume* v = volume_for_path(path);
     if (v == NULL) {
+#ifdef RECOVERY_MULTI_BOOT
+        if (strcmp(path, "/data") == 0) {
+            __system("umount /data");
+            return 0;
+        }
+#endif
         LOGE("unknown volume for path [%s]\n", path);
         return -1;
     }
@@ -339,6 +390,13 @@ int ensure_path_unmounted(const char* path) {
 int format_volume(const char* volume) {
     Volume* v = volume_for_path(volume);
     if (v == NULL) {
+#ifdef RECOVERY_MULTI_BOOT
+        if (strcmp(volume, "/data") == 0) {
+            __system("rm -rf /data/*");
+            __system("rm -rf /data/.*");
+            return 0;
+        }
+#endif
         // silent failure for sd-ext
         if (strcmp(volume, "/sd-ext") == 0)
             return -1;
@@ -395,7 +453,11 @@ int format_volume(const char* volume) {
     }
 
     if (strcmp(v->fs_type, "ext4") == 0) {
+#ifdef RECOVERY_MULTI_BOOT
+        int result = make_ext4fs(v->device, 0);
+#else
         int result = make_ext4fs(v->device, v->length);
+#endif
         if (result != 0) {
             LOGE("format_volume: make_extf4fs failed on %s\n", v->device);
             return -1;

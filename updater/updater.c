@@ -39,6 +39,8 @@ int main(int argc, char** argv) {
     setbuf(stdout, NULL);
     setbuf(stderr, NULL);
 
+    fprintf(stderr, "*** exec internal updater (%d)\n", argc);
+
     if (argc != 4) {
         fprintf(stderr, "unexpected number of arguments (%d)\n", argc);
         return 1;
