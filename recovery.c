@@ -488,27 +488,14 @@ get_menu_selection(char** headers, char** items, int menu_only,
                 case NO_ACTION:
                     break;
                 case GO_BACK:
-                    --ui_menu_level;
-                    chosen_item = GO_BACK;
+                    if (ui_get_showing_back_button()) {
+                        --ui_menu_level;
+                        chosen_item = GO_BACK;
+                    }
                     break;
             }
         } else if (!menu_only) {
             chosen_item = action;
-        }
-
-        if (abs(selected - old_selected) > 1) {
-            wrap_count++;
-            if (wrap_count == 3) {
-                wrap_count = 0;
-                if (ui_get_showing_back_button()) {
-                    ui_print("Back menu button disabled.\n");
-                    ui_set_showing_back_button(0);
-                }
-                else {
-                    ui_print("Back menu button enabled.\n");
-                    ui_set_showing_back_button(1);
-                }
-            }
         }
     }
 
@@ -747,8 +734,10 @@ prompt_and_wait() {
         
         ui_menu_level = -1;
         allow_display_toggle = 1;
+        ui_set_showing_back_button(0);
         int chosen_item = get_menu_selection(headers, MENU_ITEMS, 0, 0);
         allow_display_toggle = 0;
+        ui_set_showing_back_button(1);
 
         // device-specific code may take some action here.  It may
         // return one of the core actions handled in the switch

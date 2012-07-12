@@ -16,7 +16,7 @@ int device_handle_key(int key_code, int visible) {
                 return HIGHLIGHT_DOWN;
             case KEY_VOLUMEUP:
                 return HIGHLIGHT_UP;
-            case KEY_HOME:
+            case KEY_HOMEPAGE:
                 return SELECT_ITEM;
             case KEY_BACK:
                 return GO_BACK;
