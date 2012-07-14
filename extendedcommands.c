@@ -111,13 +111,13 @@ char* INSTALL_MENU_ITEMS[] = {  "choose zip from internal sdcard",
                                 "toggle kernel flash",
                                 "toggle updater binary",
                                 NULL };
-#define ITEM_CHOOSE_ZIP       0
-#define ITEM_CHOOSE_ZIP_INT   1
-#define ITEM_APPLY_SDCARD     2
-#define ITEM_SIG_CHECK        3
-#define ITEM_ASSERTS          4
-#define ITEM_KERNEL_FLASH     5
-#define ITEM_UPDATER_BINARY   6
+#define ITEM_CHOOSE_ZIP       (0)
+#define ITEM_CHOOSE_ZIP_INT   (1)
+#define ITEM_APPLY_SDCARD     (2)
+#define ITEM_SIG_CHECK        (3)
+#define ITEM_ASSERTS          (4)
+#define ITEM_KERNEL_FLASH     (5)
+#define ITEM_UPDATER_BINARY   (6)
 
 void show_install_update_menu()
 {
@@ -399,38 +399,39 @@ void show_nandroid_restore_menu(const char* path, int restore_kernel)
         nandroid_restore(file, restore_kernel, 1, 1, 1, 1, 0);
 }
 
-#define BOARD_UMS_LUNFILE       "/sys/devices/virtual/android_usb/android0/f_mass_storage/lun/file"
-#define BOARD_UMS_LUNFILE_EX    "/sys/devices/virtual/android_usb/android0/f_mass_storage/lun_ex/file"
+#define BOARD_UMS_LUNFILE0    "/sys/devices/platform/msm_hsusb/gadget/lun0/file"
+#define BOARD_UMS_LUNFILE1    "/sys/devices/platform/msm_hsusb/gadget/lun1/file"
 
 static int show_mount_usb_storage_menu_int_ext()
 {
     int fd_int, fd_ext;
     Volume *vol_int = volume_for_path("/sdcard");
     Volume *vol_ext = volume_for_path("/emmc");
-    if ((fd_int = open(BOARD_UMS_LUNFILE, O_WRONLY)) < 0) {
-        LOGE("Unable to open ums lunfile (%s)", strerror(errno));
-        return -1;
-    }
-    if ((fd_ext = open(BOARD_UMS_LUNFILE_EX, O_WRONLY)) < 0) {
-        LOGI("Unable to open ums lunfile_ex (%s)", strerror(errno));
+
+    if ((fd_int = open(BOARD_UMS_LUNFILE0, O_WRONLY)) < 0) {
+        LOGI("Unable to open ums lunfile0 (%s)", strerror(errno));
+    } else {
+        if ((write(fd_int, vol_int->device, strlen(vol_int->device)) < 0) &&
+            (!vol_int->device2 || (write(fd_int, vol_int->device, strlen(vol_int->device2)) < 0))) {
+            LOGI("Unable to write to ums lunfile0 (%s)", strerror(errno));
+            close(fd_int);
+            fd_int = -1;
+        }
     }
 
-    if ((write(fd_int, vol_int->device, strlen(vol_int->device)) < 0) &&
-        (!vol_int->device2 || (write(fd_int, vol_int->device, strlen(vol_int->device2)) < 0))) {
-        LOGE("Unable to write to ums lunfile (%s)", strerror(errno));
-        close(fd_int);
-        if (fd_ext != -1) {
-            close(fd_ext);
-        }
-        return -1;
-    }
-    if (fd_ext != -1) {
+    if ((fd_ext = open(BOARD_UMS_LUNFILE1, O_WRONLY)) < 0) {
+        LOGI("Unable to open ums lunfile1 (%s)", strerror(errno));
+    } else {
         if ((write(fd_ext, vol_ext->device, strlen(vol_ext->device)) < 0) &&
             (!vol_ext->device2 || (write(fd_ext, vol_ext->device, strlen(vol_ext->device2)) < 0))) {
-            LOGI("Unable to write to ums lunfile_ex (%s)", strerror(errno));
+            LOGI("Unable to write to ums lunfile1 (%s)", strerror(errno));
             close(fd_ext);
             fd_ext = -1;
          }
+    }
+
+    if (fd_int < 0 && fd_ext < 0) {
+        return -1;
     }
 
     static char* headers[] = {  "USB Mass Storage device",
@@ -449,29 +450,27 @@ static int show_mount_usb_storage_menu_int_ext()
             break;
     }
 
-    if ((fd_int = open(BOARD_UMS_LUNFILE, O_WRONLY)) < 0) {
-        LOGE("Unable to open ums lunfile (%s)", strerror(errno));
-        return -1;
-    }
-
-    char ch = 0;
-    if (write(fd_int, &ch, 1) < 0) {
-        LOGE("Unable to write to ums lunfile (%s)", strerror(errno));
-        close(fd_int);
-        return -1;
+    if (fd_int != -1) {
+        if ((fd_int = open(BOARD_UMS_LUNFILE0, O_WRONLY)) < 0) {
+            LOGI("Unable to open ums lunfile0 (%s)", strerror(errno));
+        } else {
+            char ch = 0;
+            if (write(fd_int, &ch, 1) < 0) {
+                LOGE("Unable to write to ums lunfile0 (%s)", strerror(errno));
+                close(fd_int);
+            }
+        }
     }
 
     if (fd_ext != -1) {
-        if ((fd_ext = open(BOARD_UMS_LUNFILE_EX, O_WRONLY)) < 0) {
-            LOGI("Unable to open ums lunfile_ex (%s)", strerror(errno));
-            return -1;
-        }
-
-        ch = 0;
-        if (write(fd_ext, &ch, 1) < 0) {
-            LOGI("Unable to write to ums lunfile_ex (%s)", strerror(errno));
-            close(fd_ext);
-            return -1;
+        if ((fd_ext = open(BOARD_UMS_LUNFILE1, O_WRONLY)) < 0) {
+            LOGI("Unable to open ums lunfile1 (%s)", strerror(errno));
+        } else {
+            char ch = 0;
+            if (write(fd_ext, &ch, 1) < 0) {
+                LOGI("Unable to write to ums lunfile1 (%s)", strerror(errno));
+                close(fd_ext);
+            }
         }
     }
 
@@ -482,7 +481,7 @@ static int show_mount_usb_storage_menu_int()
 {
     int fd;
     Volume *vol = volume_for_path("/sdcard");
-    if ((fd = open(BOARD_UMS_LUNFILE, O_WRONLY)) < 0) {
+    if ((fd = open(BOARD_UMS_LUNFILE0, O_WRONLY)) < 0) {
         LOGE("Unable to open ums lunfile (%s)", strerror(errno));
         return -1;
     }
@@ -509,7 +508,7 @@ static int show_mount_usb_storage_menu_int()
             break;
     }
 
-    if ((fd = open(BOARD_UMS_LUNFILE, O_WRONLY)) < 0) {
+    if ((fd = open(BOARD_UMS_LUNFILE0, O_WRONLY)) < 0) {
         LOGE("Unable to open ums lunfile (%s)", strerror(errno));
         return -1;
     }
@@ -527,7 +526,7 @@ static int show_mount_usb_storage_menu_int()
 void show_mount_usb_storage_menu()
 {
     struct stat info;
-    if (0 == stat(BOARD_UMS_LUNFILE, &info)) {
+    if (0 == stat(BOARD_UMS_LUNFILE1, &info)) {
         show_mount_usb_storage_menu_int_ext();
     } else {
         show_mount_usb_storage_menu_int();
@@ -844,13 +843,13 @@ void show_partition_menu()
     			options[mountable_volumes+i] = e->txt;
     		}
 
-        if (!is_data_media()) {
+        //if (!is_data_media()) {
           options[mountable_volumes + formatable_volumes] = "mount USB storage";
           options[mountable_volumes + formatable_volumes + 1] = NULL;
-        }
-        else {
-          options[mountable_volumes + formatable_volumes] = NULL;
-        }
+        //}
+        //else {
+        //  options[mountable_volumes + formatable_volumes] = NULL;
+        //}
 
         int chosen_item = get_menu_selection(headers, &options, 0, 0);
         if (chosen_item == GO_BACK)
