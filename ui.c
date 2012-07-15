@@ -369,9 +369,9 @@ static int rel_sum = 0;
 
 #ifdef RECOVERY_TOUCH_GESTURE
 #define NULL_POS             (-1000)
-#define UD_SWIPE_THRED       (20)
-#define BACK_SWIPE_THRED     (100)
-#define TOUCH_THRED          (1)
+#define UD_SWIPE_THRED       (80)
+#define BACK_SWIPE_THRED     (200)
+#define TOUCH_THRED          (3)
 static int s_cur_slot = 0;
 static int s_tracking_id = -1;
 static int s_first_y = NULL_POS;
@@ -436,7 +436,7 @@ static int input_callback(int fd, short revents, void *data)
                     s_first_x = s_last_x = NULL_POS;
                     fake_key = 1;
                     ev.type = EV_KEY;
-                    ev.code = KEY_HOME;
+                    ev.code = KEY_HOMEPAGE;
                     ev.value = 1;
                     rel_sum = 0;
                 } else if (s_last_x - s_first_x > BACK_SWIPE_THRED) {
