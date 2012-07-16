@@ -65,7 +65,7 @@ extern int device_perform_action(int which);
 // are erased after this returns (whether it returns success or not).
 int device_wipe_data();
 
-// galaxysii factory reset after restore pre-install apk
+// galaxys3 factory reset after restore pre-install apk
 int restore_preinstall();
 
 #define NO_ACTION           -1
@@ -116,5 +116,7 @@ get_menu_selection(char** headers, char** items, int menu_only, int initial_sele
 
 void
 set_sdcard_update_bootloader_message();
+
+extern int ui_handle_key(int key, int visible);
 
 #endif

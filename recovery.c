@@ -43,6 +43,7 @@
 
 #include "extendedcommands.h"
 #include "flashutils/flashutils.h"
+#include "dedupe/dedupe.h"
 
 static const struct option OPTIONS[] = {
   { "send_intent", required_argument, NULL, 's' },
@@ -462,9 +463,10 @@ get_menu_selection(char** headers, char** items, int menu_only,
             }
         }
 
-        int action = device_handle_key(key, visible);
+        int action = ui_handle_key(key, visible);
 
         int old_selected = selected;
+        selected = ui_get_selected_item();
 
         if (action < 0) {
             switch (action) {
@@ -497,6 +499,27 @@ get_menu_selection(char** headers, char** items, int menu_only,
         } else if (!menu_only) {
             chosen_item = action;
         }
+
+#if 0
+#ifndef BOARD_HAS_NO_SELECT_BUTTON
+#ifndef BOARD_TOUCH_RECOVERY
+        if (abs(selected - old_selected) > 1) {
+            wrap_count++;
+            if (wrap_count == 3) {
+                wrap_count = 0;
+                if (ui_get_showing_back_button()) {
+                    ui_print("Back menu button disabled.\n");
+                    ui_set_showing_back_button(0);
+                }
+                else {
+                    ui_print("Back menu button enabled.\n");
+                    ui_set_showing_back_button(1);
+                }
+            }
+        }
+#endif
+#endif
+#endif
     }
 
     ui_end_menu();
@@ -817,6 +840,8 @@ int
 main(int argc, char **argv) {
     if (strcmp(basename(argv[0]), "recovery") != 0)
     {
+        if (strstr(argv[0], "dedupe") != NULL)
+            return dedupe_main(argc, argv);
         if (strstr(argv[0], "flash_image") != NULL)
             return flash_image_main(argc, argv);
         if (strstr(argv[0], "volume") != NULL)
@@ -879,8 +904,9 @@ main(int argc, char **argv) {
             }
         }
 #endif
-        if (strstr(argv[0], "poweroff"))
+        if (strstr(argv[0], "poweroff")){
             return reboot_main(argc, argv);
+        }
         if (strstr(argv[0], "setprop"))
             return setprop_main(argc, argv);
         return busybox_driver(argc, argv);
@@ -933,9 +959,7 @@ main(int argc, char **argv) {
         ui_print("error: not found /mbs/stat/system_device\n");
         is_boot_error = 1;
     }
-#endif
 
-#ifdef RECOVERY_MULTI_BOOT
     {
         char msg[100] = { 0 };
         FILE* fp = fopen("/mbs/stat/mbs.err", "rb");
@@ -1067,6 +1091,8 @@ main(int argc, char **argv) {
     if (status != INSTALL_SUCCESS || ui_text_visible()) {
         prompt_and_wait();
     }
+
+    verify_root_and_recovery();
 
 #if 0 // galaxys3 don't support this feature
     // If there is a radio image pending, reboot now to install it.
