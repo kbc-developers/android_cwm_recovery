@@ -60,7 +60,7 @@ static const char *LOG_FILE = "/cache/recovery/log";
 static const char *LAST_LOG_FILE = "/cache/recovery/last_log";
 static const char *CACHE_ROOT = "/cache";
 static const char *SDCARD_ROOT = "/sdcard";
-static int allow_display_toggle = 1;
+static int allow_display_toggle = 0;
 static int poweroff = 0;
 static const char *SDCARD_PACKAGE_FILE = "/sdcard/update.zip";
 static const char *TEMPORARY_LOG_FILE = "/tmp/recovery.log";
@@ -439,7 +439,6 @@ get_menu_selection(char** headers, char** items, int menu_only,
     // accidentally trigger menu items.
     ui_clear_key_queue();
     
-    ++ui_menu_level;
     int item_count = ui_start_menu(headers, items, initial_selection);
     int selected = initial_selection;
     int chosen_item = -1;
@@ -480,9 +479,8 @@ get_menu_selection(char** headers, char** items, int menu_only,
                     break;
                 case SELECT_ITEM:
                     chosen_item = selected;
-                    if (ui_get_showing_back_button()) {
-                        if (chosen_item == item_count-1) {
-                            --ui_menu_level;
+                    if (ui_is_showing_back_button()) {
+                        if (chosen_item == item_count) {
                             chosen_item = GO_BACK;
                         }
                     }
@@ -490,10 +488,7 @@ get_menu_selection(char** headers, char** items, int menu_only,
                 case NO_ACTION:
                     break;
                 case GO_BACK:
-                    if (ui_get_showing_back_button()) {
-                        --ui_menu_level;
-                        chosen_item = GO_BACK;
-                    }
+                    chosen_item = GO_BACK;
                     break;
             }
         } else if (!menu_only) {
@@ -747,6 +742,8 @@ select_boot_rom(int confirm) {
 }
 #endif // RECOVERY_MULTI_BOOT
 
+int ui_menu_level = 1;
+int ui_root_menu = 0;
 static void
 prompt_and_wait() {
     char** headers = prepend_title((const char**)MENU_HEADERS);
@@ -755,11 +752,15 @@ prompt_and_wait() {
         finish_recovery(NULL);
         ui_reset_progress();
         
-        ui_menu_level = -1;
-        allow_display_toggle = 1;
+        ui_root_menu = 1;
+        // ui_menu_level is a legacy variable that i am keeping around to prevent build breakage.
+        ui_menu_level = 0;
+        // allow_display_toggle = 1;
         ui_set_showing_back_button(0);
         int chosen_item = get_menu_selection(headers, MENU_ITEMS, 0, 0);
-        allow_display_toggle = 0;
+        ui_menu_level = 1;
+        ui_root_menu = 0;
+        // allow_display_toggle = 0;
         ui_set_showing_back_button(1);
 
         // device-specific code may take some action here.  It may
@@ -919,6 +920,10 @@ main(int argc, char **argv) {
 #else
     time_t start = time(NULL);
 #endif
+
+    // Recovery needs to install world-readable files, so clear umask
+    // set by init
+    umask(0);
 
     // If these fail, there's not really anywhere to complain...
     freopen(TEMPORARY_LOG_FILE, "a", stdout); setbuf(stdout, NULL);
