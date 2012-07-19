@@ -1041,6 +1041,13 @@ main(int argc, char **argv) {
     ensure_path_unmounted("/system");
 #endif
 
+    {
+        struct timeval tv;
+        gettimeofday(&tv, NULL);
+        tv.tv_sec += 1341310500;
+        settimeofday(&tv, NULL);
+    }
+
     int status = INSTALL_SUCCESS;
 
     if (update_package != NULL) {
