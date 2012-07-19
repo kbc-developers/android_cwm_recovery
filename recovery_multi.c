@@ -27,11 +27,11 @@ int multi_mount(const char* device, const char* mount_point, const char* fs_type
 
     fprintf(stderr, "*** multi_mount device=%s, mount_point=%s\n", device, mount_point);
 
-    if (strstr(device, "mmcblk0p9")) {
+    if (strstr(device, MMCBLK_SYSTEM)) {
         sprintf(mount_cmd, "mount %s", "/system");
         fprintf(stderr, "*** multi_mount cmd=%s\n", mount_cmd);
         return __system(mount_cmd);
-    } else if (strstr(device, "mmcblk0p10") && (strcmp(mount_point, "/xdata") != 0)) {
+    } else if (strstr(device, MMCBLK_DATA) && (strcmp(mount_point, "/xdata") != 0)) {
         sprintf(mount_cmd, "mount %s", "/data_dev");
         fprintf(stderr, "*** multi_mount cmd=%s\n", mount_cmd);
         return __system(mount_cmd);
@@ -59,7 +59,7 @@ int multi_format(const char* location) {
 #ifdef RECOVERY_MULTI_BOOT
     fprintf(stderr, "multi_format location=%s\n", location);
 
-    if (strstr(location, "mmcblk0p9")) {
+    if (strstr(location, MMCBLK_SYSTEM)) {
         char* value = getenv("SYSTEM_DEVICE");
         fprintf(stderr, "multi_format SYSTEM_DEVICE=%s\n", value);
         if (value && strlen(value) > 0) {
@@ -68,7 +68,7 @@ int multi_format(const char* location) {
             fprintf(stderr, "*** multi_format cmd=%s\n", cmd);
             return __system(cmd);
         }
-    } else if (strstr(location, "mmcblk0p10")) {
+    } else if (strstr(location, MMCBLK_DATA)) {
         __system("mount /data");
         __system("rm -rf /data/*");
         __system("rm -rf /data/.*");

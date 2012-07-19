@@ -17,7 +17,10 @@
 #ifndef MTDUTILS_MOUNTS_H_
 #define MTDUTILS_MOUNTS_H_
 
-#define MMCBLK_BOOT	"mmcblk0p7"
+#define MMCBLK_BOOT     "mmcblk0p7"
+#define MMCBLK_SYSTEM   "mmcblk0p14"
+#define MMCBLK_DATA     "mmcblk0p15"
+
 
 typedef struct {
  const char *device;

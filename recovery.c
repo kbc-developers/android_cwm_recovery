@@ -881,14 +881,6 @@ main(int argc, char **argv) {
             if (argc > 1) {
                 int i, chg_system = 0, chg_data = 0;
                 for (i = 1; i < argc; i++) {
-                    if (strstr(argv[i], "mmcblk0p1") &&
-                        !strstr(argv[i], "mmcblk0p10") &&
-                        !strstr(argv[i], "mmcblk0p11") &&
-                        !strstr(argv[i], "mmcblk0p12")) {
-                        return __system("mount");
-                    }
-                }
-                for (i = 1; i < argc; i++) {
                     if (strcmp(argv[i], "/system") == 0) {
                         chg_system = (argc != 2) ? 1 : 0;
                         break;
