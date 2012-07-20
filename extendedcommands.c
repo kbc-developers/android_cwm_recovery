@@ -1142,6 +1142,7 @@ void show_advanced_menu()
 
     static char* list[] = { "Reboot Recovery",
                             "Reboot Download",
+                            "Root hacking",
                             "Wipe Dalvik Cache",
                             "Wipe Battery Stats",
                             "Report Error",
@@ -1162,17 +1163,26 @@ void show_advanced_menu()
             break;
         switch (chosen_item)
         {
-            case 0:
+            case 0: // Reboot Recovery
             {
                 android_reboot(ANDROID_RB_RESTART2, 0, "recovery");
                 break;
             }
-            case 1:
+            case 1: // Reboot Download
             {
                 android_reboot(ANDROID_RB_RESTART2, 0, "download");
                 break;
             }
-            case 2:
+            case 2: // Root hacking
+            {
+                ensure_path_mounted("/system");
+                ensure_path_mounted("/data");
+                ui_print("Root hacking...\n");
+                __system("root_hacking");
+                ui_print("Done!\n");
+                break;
+            }
+            case 3: // Wipe Dalvik Cache
             {
                 if (0 != ensure_path_mounted("/data"))
                     break;
@@ -1191,16 +1201,16 @@ void show_advanced_menu()
                 ensure_path_unmounted("/data");
                 break;
             }
-            case 3:
+            case 4: // Wipe Battery Stats
             {
                 if (confirm_selection( "Confirm wipe?", "Yes - Wipe Battery Stats"))
                     wipe_battery_stats();
                 break;
             }
-            case 4:
+            case 5: // Report Error
                 handle_failure(1);
                 break;
-            case 5:
+            case 6: // Key Test
             {
                 ui_print("Outputting key codes.\n");
                 ui_print("Go back to end debugging.\n");
@@ -1215,12 +1225,12 @@ void show_advanced_menu()
                 while (action != GO_BACK);
                 break;
             }
-            case 6:
+            case 7: // Show log
             {
                 ui_printlogtail(12);
                 break;
             }
-            case 7:
+            case 8: // Partition Internal SD Card
             {
                 static char* ext_sizes[] = { "128M",
                                              "256M",
@@ -1263,7 +1273,7 @@ void show_advanced_menu()
                     ui_print("An error occured while partitioning your SD Card. Please see /tmp/recovery.log for more details.\n");
                 break;
             }
-            case 8:
+            case 9: // Fix Permissions
             {
                 ensure_path_mounted("/system");
                 ensure_path_mounted("/data");
@@ -1273,7 +1283,7 @@ void show_advanced_menu()
                 break;
             }
 #ifdef BOARD_HAS_SDCARD_INTERNAL
-            case 9:
+            case 10: // Partition External SD Card
             {
                 static char* ext_sizes[] = { "128M",
                                              "256M",
