@@ -402,6 +402,31 @@ void show_nandroid_restore_menu(const char* path, int restore_kernel)
         nandroid_restore(file, restore_kernel, 1, 1, 1, 1, 0);
 }
 
+void show_nandroid_delete_menu(const char* path)
+{
+    if (ensure_path_mounted(path) != 0) {
+        LOGE("Can't mount %s\n", path);
+        return;
+    }
+
+    static char* headers[] = {  "Choose an image to delete",
+                                "",
+                                NULL
+    };
+
+    char tmp[PATH_MAX];
+    sprintf(tmp, "%s/clockworkmod/backup/", path);
+    char* file = choose_file_menu(tmp, NULL, headers);
+    if (file == NULL)
+        return;
+
+    if (confirm_selection("Confirm delete?", "Yes - Delete")) {
+        // nandroid_restore(file, 1, 1, 1, 1, 1, 0);
+        sprintf(tmp, "rm -rf %s", file);
+        __system(tmp);
+    }
+}
+
 #define BOARD_UMS_LUNFILE0    "/sys/devices/platform/msm_hsusb/gadget/lun0/file"
 #define BOARD_UMS_LUNFILE1    "/sys/devices/platform/msm_hsusb/gadget/lun1/file"
 
@@ -982,6 +1007,17 @@ void show_nandroid_advanced_restore_menu(const char* path)
     }
 }
 
+static void run_dedupe_gc(const char* other_sd) {
+    ensure_path_mounted("/sdcard");
+    dedupe_gc("/sdcard/clockworkmod/blobs");
+    if (other_sd) {
+        ensure_path_mounted(other_sd);
+        char tmp[PATH_MAX];
+        sprintf(tmp, "%s/clockworkmod/blobs", other_sd);
+        dedupe_gc(tmp);
+    }
+}
+
 void show_nandroid_menu()
 {
     static char* headers[] = {  "Nandroid",
@@ -996,20 +1032,23 @@ void show_nandroid_menu()
                             "restore from internal sdcard",
                             "restore from internal sdcard with out kernel",
                             "advanced restore from internal sdcard",
+                            "delete from internal sdcard",
+                            "free nandroid space",
                             "backup to external sdcard",
                             "restore from external sdcard",
                             "restore from external sdcard with out kernel",
                             "advanced restore from external sdcard",
+                            "delete from external sdcard",
                             NULL
     };
 
     if (volume_for_path("/emmc") == NULL)
-        list[4] = NULL;
+        list[6] = NULL;
 
     int chosen_item = get_menu_selection(headers, list, 0, 0);
     switch (chosen_item)
     {
-        case 0:
+        case 0: // backup to internal sdcard
             {
                 char backup_path[PATH_MAX];
 #ifdef RECOVERY_TZ_JPN
@@ -1031,16 +1070,22 @@ void show_nandroid_menu()
                 nandroid_backup(backup_path);
             }
             break;
-        case 1:
+        case 1: // restore from internal sdcard
             show_nandroid_restore_menu("/sdcard", 1);
             break;
-        case 2:
+        case 2: // restore from internal sdcard with out kernel
             show_nandroid_restore_menu("/sdcard", 0);
             break;
-        case 3:
+        case 3: // advanced restore from internal sdcard
             show_nandroid_advanced_restore_menu("/sdcard");
             break;
-        case 4:
+        case 4: // delete from internal sdcard
+            show_nandroid_delete_menu("/sdcard");
+            break;
+        case 5: // free nandroid space
+            run_dedupe_gc("/emmc");
+            break;
+        case 6: // backup to external sdcard
             {
                 char backup_path[PATH_MAX];
 #ifdef RECOVERY_TZ_JPN
@@ -1062,14 +1107,17 @@ void show_nandroid_menu()
                 nandroid_backup(backup_path);
             }
             break;
-        case 5:
+        case 7: // restore from external sdcard
             show_nandroid_restore_menu("/emmc", 1);
             break;
-        case 6:
+        case 8: // restore from external sdcard with out kernel
             show_nandroid_restore_menu("/emmc", 0);
             break;
-        case 7:
+        case 9: // advanced restore from external sdcard
             show_nandroid_advanced_restore_menu("/emmc");
+            break;
+        case 10: // delete from external sdcard
+            show_nandroid_delete_menu("/emmc");
             break;
     }
 }
