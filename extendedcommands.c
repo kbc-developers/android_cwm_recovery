@@ -1093,8 +1093,8 @@ void show_nandroid_menu()
 #else
                 time_t t = time(NULL);
 #endif
-                struct tm *tmp = localtime(&t);
-                if (tmp == NULL)
+                struct tm *timeptr = localtime(&t);
+                if (timeptr == NULL)
                 {
                     struct timeval tp;
                     gettimeofday(&tp, NULL);
