@@ -1056,8 +1056,8 @@ void show_nandroid_menu()
 #else
                 time_t t = time(NULL);
 #endif
-                struct tm *tmp = localtime(&t);
-                if (tmp == NULL)
+                struct tm *timeptr = localtime(&t);
+                if (timeptr == NULL)
                 {
                     struct timeval tp;
                     gettimeofday(&tp, NULL);
@@ -1065,7 +1065,7 @@ void show_nandroid_menu()
                 }
                 else
                 {
-                    strftime(backup_path, sizeof(backup_path), "/sdcard/clockworkmod/backup/%F.%H.%M.%S", tmp);
+                    strftime(backup_path, sizeof(backup_path), "/sdcard/clockworkmod/backup/%F.%H.%M.%S", timeptr);
                 }
                 nandroid_backup(backup_path);
             }
@@ -1102,7 +1102,7 @@ void show_nandroid_menu()
                 }
                 else
                 {
-                    strftime(backup_path, sizeof(backup_path), "/emmc/clockworkmod/backup/%F.%H.%M.%S", tmp);
+                    strftime(backup_path, sizeof(backup_path), "/emmc/clockworkmod/backup/%F.%H.%M.%S", timeptr);
                 }
                 nandroid_backup(backup_path);
             }
