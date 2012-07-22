@@ -1042,10 +1042,47 @@ main(int argc, char **argv) {
 #endif
 
     {
-        struct timeval tv;
-        gettimeofday(&tv, NULL);
-        tv.tv_sec += 1341310500;
-        settimeofday(&tv, NULL);
+        char buf[100];
+        if (ensure_path_mounted("/sdcard") == 0) {
+            FILE* ifp = fopen("/sdcard/clockworkmod/.date.now", "rb");
+            if (ifp) {
+                memset(buf, 0, sizeof(buf));
+                fseek(ifp, 0, SEEK_END);
+                size_t length = ftell(ifp);
+                fseek(ifp, 0L, SEEK_SET);
+                fread(buf, 1, length, ifp);
+                fclose(ifp);
+                remove("/sdcard/clockworkmod/.date.now");
+                remove("/sdcard/clockworkmod/.timeoffset");
+                
+                long time_now = atol(buf);
+                struct timeval tv;
+                gettimeofday(&tv, NULL);
+                long time_offset = time_now - tv.tv_sec + 10;// - (24*60*60);
+                sprintf(buf, "%ld", time_offset);
+                FILE* ofp = fopen("/sdcard/clockworkmod/.timeoffset", "wb");
+                fwrite(buf, 1, strlen(buf), ofp);
+                fclose(ofp);
+                ui_print("Adjust time add %ssec\n", buf);
+            }
+            FILE* fp = fopen("/sdcard/clockworkmod/.timeoffset", "rb");
+            if (fp) {
+                memset(buf, 0, sizeof(buf));
+                fseek(fp, 0, SEEK_END);
+                size_t length = ftell(fp);
+                fseek(fp, 0L, SEEK_SET);
+                fread(buf, 1, length, fp);
+                fclose(fp);
+
+                long offset = atol(buf);
+                struct timeval tv;
+                gettimeofday(&tv, NULL);
+                tv.tv_usec = 0;
+                tv.tv_sec += offset;//1341310500;
+                settimeofday(&tv, NULL);
+            }
+            ensure_path_unmounted("/sdcard");
+        }
     }
 
     int status = INSTALL_SUCCESS;
