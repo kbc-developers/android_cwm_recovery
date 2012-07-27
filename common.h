@@ -18,6 +18,7 @@
 #define RECOVERY_COMMON_H
 
 #include <stdio.h>
+#include "device_config.h"
 
 // Initialize the graphics system.
 void ui_init();

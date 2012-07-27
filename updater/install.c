@@ -34,6 +34,7 @@
 #include "mincrypt/sha.h"
 #include "minzip/DirUtil.h"
 #include "minelf/Retouch.h"
+#include "device_config.h"
 #include "mounts.h"
 #include "mtdutils/mtdutils.h"
 #include "updater.h"

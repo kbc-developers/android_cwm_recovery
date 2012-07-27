@@ -93,7 +93,7 @@ handle_firmware_update(char* type, char* filename, ZipArchive* zip) {
         fclose(f);
     }
 
-#if 0// galaxys2 don't support this feature
+#if 0// galaxy don't support this feature
     if (remember_firmware_update(type, data, data_size)) {
         LOGE("Can't store %s image\n", type);
         free(data);
@@ -113,7 +113,7 @@ static int
 try_update_binary(const char *path, ZipArchive *zip) {
     char* binary;
     if (script_updater_binary) {
-        binary = "/sbin/updater";
+        binary = UPDATER_BIN_PATH;
     } else {
         const ZipEntry* binary_entry =
         mzFindZipEntry(zip, ASSUMED_UPDATE_BINARY_NAME);

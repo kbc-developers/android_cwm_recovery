@@ -427,9 +427,6 @@ void show_nandroid_delete_menu(const char* path)
     }
 }
 
-#define BOARD_UMS_LUNFILE0    "/sys/devices/platform/msm_hsusb/gadget/lun0/file"
-#define BOARD_UMS_LUNFILE1    "/sys/devices/platform/msm_hsusb/gadget/lun1/file"
-
 static int show_mount_usb_storage_menu_int_ext()
 {
     int fd_int, fd_ext;
@@ -509,7 +506,7 @@ static int show_mount_usb_storage_menu_int()
 {
     int fd;
     Volume *vol = volume_for_path("/sdcard");
-    if ((fd = open(BOARD_UMS_LUNFILE0, O_WRONLY)) < 0) {
+    if ((fd = open(BOARD_UMS_LUNFILE, O_WRONLY)) < 0) {
         LOGE("Unable to open ums lunfile (%s)", strerror(errno));
         return -1;
     }
@@ -536,7 +533,7 @@ static int show_mount_usb_storage_menu_int()
             break;
     }
 
-    if ((fd = open(BOARD_UMS_LUNFILE0, O_WRONLY)) < 0) {
+    if ((fd = open(BOARD_UMS_LUNFILE, O_WRONLY)) < 0) {
         LOGE("Unable to open ums lunfile (%s)", strerror(errno));
         return -1;
     }
@@ -874,13 +871,17 @@ void show_partition_menu()
     			options[mountable_volumes+i] = e->txt;
     		}
 
-        //if (!is_data_media()) {
+#ifdef BOARD_HAS_SDCARD_EXTERNAL
+        if (!is_data_media()) {
+#endif
           options[mountable_volumes + formatable_volumes] = "mount USB storage";
           options[mountable_volumes + formatable_volumes + 1] = NULL;
-        //}
-        //else {
-        //  options[mountable_volumes + formatable_volumes] = NULL;
-        //}
+#ifdef BOARD_HAS_SDCARD_EXTERNAL
+        }
+        else {
+          options[mountable_volumes + formatable_volumes] = NULL;
+        }
+#endif
 
         int chosen_item = get_menu_selection(headers, &options, 0, 0);
         if (chosen_item == GO_BACK)
@@ -891,6 +892,16 @@ void show_partition_menu()
         else if (chosen_item < mountable_volumes) {
 			      MountMenuEntry* e = &mount_menue[chosen_item];
             Volume* v = e->v;
+
+#ifdef TARGET_DEVICE_SC02C
+            if (strstr(v->device, MMCBLK_EFS) &&
+                !strstr(v->device, MMCBLK_DATA) &&
+                !strstr(v->device, MMCBLK_SDCARD) &&
+                !strstr(v->device, MMCBLK_HIDDEN)) {
+                ui_print("Error mounting %s!\n", v->mount_point);
+                return;
+            }
+#endif
 
             if (is_path_mounted(v->mount_point))
             {

@@ -389,16 +389,13 @@ static void *progress_thread(void *cookie)
 static int rel_sum = 0;
 
 #ifdef RECOVERY_TOUCH_GESTURE
-#define NULL_POS             (-1000)
-#define UD_SWIPE_THRED       (80)
-#define BACK_SWIPE_THRED     (200)
-#define TOUCH_THRED          (3)
+#define GESTURE_NULL_POS             (-1000)
 static int s_cur_slot = 0;
 static int s_tracking_id = -1;
-static int s_first_y = NULL_POS;
-static int s_last_y = NULL_POS;
-static int s_first_x = NULL_POS;
-static int s_last_x = NULL_POS;
+static int s_first_y = GESTURE_NULL_POS;
+static int s_last_y = GESTURE_NULL_POS;
+static int s_first_x = GESTURE_NULL_POS;
+static int s_last_x = GESTURE_NULL_POS;
 #endif
 
 static int input_callback(int fd, short revents, void *data)
@@ -456,26 +453,26 @@ static int input_callback(int fd, short revents, void *data)
         if (ev.code == ABS_MT_TRACKING_ID) {
             s_tracking_id = ev.value;
             if (s_tracking_id == -1) {
-                if ((abs(s_last_y - s_first_y) <= TOUCH_THRED)
-                &&  (abs(s_last_x - s_first_x) <= TOUCH_THRED)) {
-                    s_first_y = s_last_y = NULL_POS;
-                    s_first_x = s_last_x = NULL_POS;
+                if ((abs(s_last_y - s_first_y) <= GESTURE_TOUCH_THRED)
+                &&  (abs(s_last_x - s_first_x) <= GESTURE_TOUCH_THRED)) {
+                    s_first_y = s_last_y = GESTURE_NULL_POS;
+                    s_first_x = s_last_x = GESTURE_NULL_POS;
                     fake_key = 1;
                     ev.type = EV_KEY;
-                    ev.code = KEY_HOMEPAGE;
+                    ev.code = DEVICE_KEY_HOME;
                     ev.value = 1;
                     rel_sum = 0;
-                } else if (s_last_x - s_first_x > BACK_SWIPE_THRED) {
-                    s_first_y = s_last_y = NULL_POS;
-                    s_first_x = s_last_x = NULL_POS;
+                } else if (s_last_x - s_first_x > GESTURE_BACK_SWIPE_THRED) {
+                    s_first_y = s_last_y = GESTURE_NULL_POS;
+                    s_first_x = s_last_x = GESTURE_NULL_POS;
                     fake_key = 1;
                     ev.type = EV_KEY;
                     ev.code = KEY_BACK;
                     ev.value = 1;
                     rel_sum = 0;
                 } else {
-                    s_first_y = s_last_y = NULL_POS;
-                    s_first_x = s_last_x = NULL_POS;
+                    s_first_y = s_last_y = GESTURE_NULL_POS;
+                    s_first_x = s_last_x = GESTURE_NULL_POS;
                     return 0;
                 }
             }
@@ -483,12 +480,12 @@ static int input_callback(int fd, short revents, void *data)
         }
         if (s_tracking_id != -1) {
             if (ev.code == ABS_MT_POSITION_Y) {
-                if (s_last_y == NULL_POS) {
+                if (s_last_y == GESTURE_NULL_POS) {
                     s_first_y = s_last_y = ev.value;
                 } else {
                     int val = ev.value - s_last_y;
                     int abs_val = abs(val);
-                    if (abs_val > UD_SWIPE_THRED) {
+                    if (abs_val > GESTURE_UD_SWIPE_THRED) {
                         s_last_y = ev.value;
                         if (val > 0) {
                             fake_key = 1;
@@ -506,7 +503,7 @@ static int input_callback(int fd, short revents, void *data)
                     }
                 }
             } else if (ev.code == ABS_MT_POSITION_X) {
-                if (s_last_x == NULL_POS) {
+                if (s_last_x == GESTURE_NULL_POS) {
                     s_first_x = s_last_x = ev.value;
                 } else {
                     s_last_x = ev.value;

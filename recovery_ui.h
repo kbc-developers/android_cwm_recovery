@@ -65,7 +65,7 @@ extern int device_perform_action(int which);
 // are erased after this returns (whether it returns success or not).
 int device_wipe_data();
 
-// galaxys3 factory reset after restore pre-install apk
+// galaxy factory reset after restore pre-install apk
 int restore_preinstall();
 
 #define NO_ACTION           -1

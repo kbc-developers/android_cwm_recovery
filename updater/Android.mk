@@ -20,6 +20,12 @@ LOCAL_MODULE_TAGS := eng
 
 LOCAL_SRC_FILES := $(updater_src_files)
 
+ifeq ($(TARGET_PRODUCT), cm_d2dcm)
+LOCAL_CFLAGS += -DTARGET_DEVICE_SC06D
+else ifeq ($(TARGET_DEVICE), cm_galaxys2)
+LOCAL_CFLAGS += -DTARGET_DEVICE_SC02C
+endif
+
 ifeq ($(TARGET_USERIMAGES_USE_EXT4), true)
 LOCAL_CFLAGS += -DUSE_EXT4
 LOCAL_C_INCLUDES += system/extras/ext4_utils

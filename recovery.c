@@ -449,6 +449,10 @@ get_menu_selection(char** headers, char** items, int menu_only,
     int wrap_count = 0;
 
     while (chosen_item < 0 && chosen_item != GO_BACK) {
+#ifdef TARGET_DEVICE_SC02C
+        usleep(50 * 1000); // wait 50msec
+        ui_clear_key_queue();
+#endif
         int key = ui_wait_key();
         int visible = ui_text_visible();
 
@@ -655,6 +659,7 @@ update_directory(const char* path, const char* unmount_when_done) {
 
 static void
 wipe_data(int confirm) {
+    int chosen_item = 0;
     if (confirm) {
         static char** title_headers = NULL;
 
@@ -671,7 +676,11 @@ wipe_data(int confirm) {
                           " No",
                           " No",
                           " No",
+#ifdef TARGET_DEVICE_SC02C
+                          " Yes -- delete all user data, and pre-install",	// [5]
+#else
                           " No",
+#endif
                           " No",
                           " Yes -- delete all user data",   // [7]
                           " No",
@@ -679,8 +688,12 @@ wipe_data(int confirm) {
                           " No",
                           NULL };
 
-        int chosen_item = get_menu_selection(title_headers, items, 1, 0);
+        chosen_item = get_menu_selection(title_headers, items, 1, 0);
+#ifdef TARGET_DEVICE_SC02C
+        if (chosen_item != 5 && chosen_item != 7) {
+#else
         if (chosen_item != 7) {
+#endif
             return;
         }
     }
@@ -696,6 +709,12 @@ wipe_data(int confirm) {
     erase_volume("/sd-ext");
 #endif
     erase_volume("/sdcard/.android_secure");
+#ifdef TARGET_DEVICE_SC02C
+    if (chosen_item == 5) {
+        ui_print("\n-- restore pre-install apk...\n");
+        restore_preinstall();
+    }
+#endif
     ui_print("Data wipe complete.\n");
 }
 
@@ -880,6 +899,16 @@ main(int argc, char **argv) {
         if (strstr(argv[0], "mount") && !strstr(argv[0], "umount")) {
             if (argc > 1) {
                 int i, chg_system = 0, chg_data = 0;
+#ifdef TARGET_DEVICE_SC02C
+                for (i = 1; i < argc; i++) {
+                    if (strstr(argv[i], MMCBLK_EFS) &&
+                        !strstr(argv[i], MMCBLK_DATA) &&
+                        !strstr(argv[i], MMCBLK_SDCARD) &&
+                        !strstr(argv[i], MMCBLK_HIDDEN)) {
+                        return __system("mount");
+                    }
+                }
+#endif
                 for (i = 1; i < argc; i++) {
                     if (strcmp(argv[i], "/system") == 0) {
                         chg_system = (argc != 2) ? 1 : 0;
@@ -922,6 +951,9 @@ main(int argc, char **argv) {
     freopen(TEMPORARY_LOG_FILE, "a", stderr); setbuf(stderr, NULL);
     printf("Starting recovery on %s", ctime(&start));
 
+#ifdef TARGET_DEVICE_SC02C
+    usleep(1000 * 1000); // wait 1sec
+#endif
     device_ui_init(&ui_parameters);
     ui_init();
     ui_print(EXPAND(RECOVERY_VERSION)"\n");
@@ -1033,14 +1065,14 @@ main(int argc, char **argv) {
     property_list(print_property, NULL);
     printf("\n");
 
-#if 0
+#ifdef TARGET_DEVICE_SC02C
     /** force umount /system
      * uncertainty in timing of umount reocvery.rc,
      * run the umount when the recovery initialize completed.
      */
     ensure_path_unmounted("/system");
 #endif
-
+#ifdef TARGET_DEVICE_SC06C
     {
         char buf[100];
         if (ensure_path_mounted("/sdcard") == 0) {
@@ -1084,6 +1116,7 @@ main(int argc, char **argv) {
             ensure_path_unmounted("/sdcard");
         }
     }
+#endif
 
     int status = INSTALL_SUCCESS;
 
@@ -1135,7 +1168,7 @@ main(int argc, char **argv) {
 
     verify_root_and_recovery();
 
-#if 0 // galaxys3 don't support this feature
+#if 0 // galaxy don't support this feature
     // If there is a radio image pending, reboot now to install it.
     maybe_install_firmware_update(send_intent);
 #endif
