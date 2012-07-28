@@ -22,7 +22,7 @@ LOCAL_SRC_FILES := $(updater_src_files)
 
 ifeq ($(TARGET_PRODUCT), cm_d2dcm)
 LOCAL_CFLAGS += -DTARGET_DEVICE_SC06D
-else ifeq ($(TARGET_DEVICE), cm_galaxys2)
+else ifeq ($(TARGET_PRODUCT), cm_galaxys2)
 LOCAL_CFLAGS += -DTARGET_DEVICE_SC02C
 endif
 

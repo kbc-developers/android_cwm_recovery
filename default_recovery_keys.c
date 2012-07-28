@@ -16,8 +16,8 @@ int device_toggle_display(volatile char* key_pressed, int key_code) {
 
 int device_handle_key(int key_code, int visible) {
     if (visible) {
-#ifdef TARGET_DEVICE_SC06D
         switch (key_code) {
+#ifdef TARGET_DEVICE_SC06D
             case KEY_VOLUMEDOWN:
                 return HIGHLIGHT_DOWN;
             case KEY_VOLUMEUP:
