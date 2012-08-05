@@ -40,6 +40,9 @@ cp /vendor/rooting_kit/busybox_mount /system/bin/busybox_mount
 chown root.shell /system/bin/busybox_mount
 chmod 755 /system/bin/busybox_mount
 
+rm /system/bin/fsslcmnd
+
+
 # busybox
 cp /vendor/rooting_kit/busybox /system/xbin/busybox
 chown root.shell /system/xbin/busybox
