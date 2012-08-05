@@ -783,7 +783,7 @@ int is_safe_to_format(char* name)
 {
     char str[255];
     char* partition;
-    property_get("ro.cwm.forbid_format", str, "/misc,/radio,/bootloader,/recovery,/efs");
+    property_get("ro.cwm.forbid_format", str, "/misc,/radio,/bootloader,/recovery,/efs,/wimax");
 
     partition = strtok(str, ", ");
     while (partition != NULL) {
@@ -961,7 +961,7 @@ void show_nandroid_advanced_restore_menu(const char* path)
     if (file == NULL)
         return;
 
-    static char* headers[] = {  "Nandroid Advanced Restore",
+    static char* headers[] = {  "Advanced Restore",
                                 "",
                                 NULL
     };
@@ -1031,7 +1031,7 @@ static void run_dedupe_gc(const char* other_sd) {
 
 void show_nandroid_menu()
 {
-    static char* headers[] = {  "Nandroid",
+    static char* headers[] = {  "Backup and Restore",
 #ifdef RECOVERY_MULTI_BOOT
                                 TARGET_ROM,
 #endif
@@ -1044,7 +1044,7 @@ void show_nandroid_menu()
                             "restore from internal sdcard with out kernel",
                             "advanced restore from internal sdcard",
                             "delete from internal sdcard",
-                            "free nandroid space",
+                            "free unused backup data",
                             "backup to external sdcard",
                             "restore from external sdcard",
                             "restore from external sdcard with out kernel",
@@ -1093,7 +1093,7 @@ void show_nandroid_menu()
         case 4: // delete from internal sdcard
             show_nandroid_delete_menu("/sdcard");
             break;
-        case 5: // free nandroid space
+        case 5: // free unused backup data
             run_dedupe_gc("/emmc");
             break;
         case 6: // backup to external sdcard
