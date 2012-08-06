@@ -871,12 +871,12 @@ void show_partition_menu()
     			options[mountable_volumes+i] = e->txt;
     		}
 
-#ifdef BOARD_HAS_SDCARD_EXTERNAL
+#ifndef BOARD_HAS_SDCARD_EXTERNAL
         if (!is_data_media()) {
 #endif
           options[mountable_volumes + formatable_volumes] = "mount USB storage";
           options[mountable_volumes + formatable_volumes + 1] = NULL;
-#ifdef BOARD_HAS_SDCARD_EXTERNAL
+#ifndef BOARD_HAS_SDCARD_EXTERNAL
         }
         else {
           options[mountable_volumes + formatable_volumes] = NULL;

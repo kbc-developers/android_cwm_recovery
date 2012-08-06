@@ -40,6 +40,9 @@
 #define GESTURE_BACK_SWIPE_THRED     (200)
 #define GESTURE_TOUCH_THRED          (3)
 
+// option
+#define BOARD_HAS_SDCARD_EXTERNAL
+
 #endif
 // --------------------------------------------------------
 
@@ -68,6 +71,9 @@
 #define GESTURE_UD_SWIPE_THRED       (20)
 #define GESTURE_BACK_SWIPE_THRED     (100)
 #define GESTURE_TOUCH_THRED          (1)
+
+// option
+#define BOARD_HAS_SDCARD_EXTERNAL
 
 #endif
 // --------------------------------------------------------
