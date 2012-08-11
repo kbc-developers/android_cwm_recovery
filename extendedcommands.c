@@ -67,7 +67,9 @@ get_filtered_menu_selection(char** headers, char** items, int menu_only, int ini
     for (index = 0; index < items_count; index++) {
         if (items[index] == NULL)
             continue;
-        items[offset] = items[index];
+        char *item = items[index];
+        items[index] = NULL;
+        items[offset] = item;
         translate_table[offset] = index;
         offset++;
     }
@@ -85,6 +87,15 @@ get_filtered_menu_selection(char** headers, char** items, int menu_only, int ini
     return ret;
 }
 
+void write_string_to_file(const char* filename, const char* string) {
+    ensure_path_mounted(filename);
+    char tmp[PATH_MAX];
+    sprintf(tmp, "mkdir -p $(dirname %s)", filename);
+    __system(tmp);
+    FILE *file = fopen(filename, "w");
+    fprintf(file, "%s", string);
+    fclose(file);
+}
 
 void
 toggle_signature_check()
@@ -1056,6 +1067,29 @@ static void run_dedupe_gc(const char* other_sd) {
     }
 }
 
+static void choose_backup_format() {
+    static char* headers[] = {  "Backup Format",
+                                "",
+                                NULL
+    };
+
+    char* list[] = { "dup (default)",
+        "tar"
+    };
+
+    int chosen_item = get_menu_selection(headers, list, 0, 0);
+    switch (chosen_item) {
+        case 0:
+            write_string_to_file(NANDROID_BACKUP_FORMAT_FILE, "dup");
+            ui_print("Backup format set to dedupe.\n");
+            break;
+        case 1:
+            write_string_to_file(NANDROID_BACKUP_FORMAT_FILE, "tar");
+            ui_print("Backup format set to tar.\n");
+            break;
+    }
+}
+
 void show_nandroid_menu()
 {
     static char* headers[] = {  "Backup and Restore",
@@ -1072,6 +1106,7 @@ void show_nandroid_menu()
                             "advanced restore from internal sdcard",
                             "delete from internal sdcard",
                             "free unused backup data",
+                            "choose backup format",
                             "backup to external sdcard",
                             "restore from external sdcard",
                             "restore from external sdcard with out kernel",
@@ -1123,7 +1158,10 @@ void show_nandroid_menu()
         case 5: // free unused backup data
             run_dedupe_gc("/emmc");
             break;
-        case 6: // backup to external sdcard
+        case 6: // choose backup format
+            choose_backup_format();
+            break;
+        case 7: // backup to external sdcard
             {
                 char backup_path[PATH_MAX];
 #ifdef RECOVERY_TZ_JPN
@@ -1145,16 +1183,16 @@ void show_nandroid_menu()
                 nandroid_backup(backup_path);
             }
             break;
-        case 7: // restore from external sdcard
+        case 8: // restore from external sdcard
             show_nandroid_restore_menu("/emmc", 1);
             break;
-        case 8: // restore from external sdcard with out kernel
+        case 9: // restore from external sdcard with out kernel
             show_nandroid_restore_menu("/emmc", 0);
             break;
-        case 9: // advanced restore from external sdcard
+        case 10: // advanced restore from external sdcard
             show_nandroid_advanced_restore_menu("/emmc");
             break;
-        case 10: // delete from external sdcard
+        case 11: // delete from external sdcard
             show_nandroid_delete_menu("/emmc");
             break;
     }
