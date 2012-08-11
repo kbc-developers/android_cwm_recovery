@@ -321,7 +321,6 @@ ln -sf busybox /system/xbin/start-stop-daemon
 ln -sf busybox /system/xbin/stat
 ln -sf busybox /system/xbin/strings
 ln -sf busybox /system/xbin/stty
-ln -sf busybox /system/xbin/su
 ln -sf busybox /system/xbin/sulogin
 ln -sf busybox /system/xbin/sum
 ln -sf busybox /system/xbin/sv
