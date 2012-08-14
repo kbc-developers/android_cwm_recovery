@@ -1098,8 +1098,6 @@ main(int argc, char **argv) {
                 fwrite(buf, 1, strlen(buf), ofp);
                 fclose(ofp);
                 ui_print("Adjust time add %ssec\n", buf);
-            } else {
-                LOGE("can't open .date.now");
             }
             fp = fopen("/sdcard/clockworkmod/.timeoffset", "rb");
             if (fp) {
@@ -1125,11 +1123,11 @@ main(int argc, char **argv) {
                 strftime(buf, 100, "%F.%H.%M.%S", tmp);
                 ui_print("datetime: %s\n", buf);
             } else {
-                LOGE("can't open .timeoffset");
+                LOGE("can't open .timeoffset\n");
             }
             ensure_path_unmounted("/sdcard");
         } else {
-            LOGE("/sdcard mount error");
+            LOGE("/sdcard mount error\n");
         }
     }
 #endif
