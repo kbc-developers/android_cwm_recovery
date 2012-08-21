@@ -73,6 +73,8 @@ static int parse_options(char* options, Volume* volume) {
             volume->fs_options = strdup(option + 11);
         } else if (strncmp(option, "fs_options2=", 12) == 0) {
             volume->fs_options2 = strdup(option + 12);
+        } else if (strncmp(option, "lun=", 4) == 0) {
+            volume->lun = strdup(option + 4);
         } else {
             LOGE("bad option \"%s\"\n", option);
             return -1;
@@ -93,6 +95,7 @@ void load_volume_table() {
     device_volumes[0].fs_type2 = NULL;
     device_volumes[0].fs_options = NULL;
     device_volumes[0].fs_options2 = NULL;
+    device_volumes[0].lun = NULL;
     device_volumes[0].length = 0;
     num_volumes = 1;
 
@@ -143,6 +146,7 @@ void load_volume_table() {
                 device_volumes[num_volumes].fs_options2 = NULL;
                 device_volumes[num_volumes].fs_options = dupe_string(fs_options);
             }
+            device_volumes[num_volumes].lun = NULL;
             ++num_volumes;
 #else
         char* options = NULL;
@@ -172,6 +176,7 @@ void load_volume_table() {
             device_volumes[num_volumes].fs_type2 = NULL;
             device_volumes[num_volumes].fs_options = NULL;
             device_volumes[num_volumes].fs_options2 = NULL;
+            device_volumes[num_volumes].lun = NULL;
 
             if (parse_options(options, device_volumes + num_volumes) != 0) {
                 LOGE("skipping malformed recovery.fstab line: %s\n", original);

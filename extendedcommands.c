@@ -465,135 +465,162 @@ void show_nandroid_delete_menu(const char* path)
     }
 }
 
-static int show_mount_usb_storage_menu_int_ext()
-{
-    int fd_int, fd_ext;
-    Volume *vol_int = volume_for_path("/sdcard");
-    Volume *vol_ext = volume_for_path("/emmc");
+#define MAX_NUM_USB_VOLUMES 3
+#define LUN_FILE_EXPANDS    2
 
-    if ((fd_int = open(BOARD_UMS_LUNFILE0, O_WRONLY)) < 0) {
-        LOGI("Unable to open ums lunfile0 (%s)", strerror(errno));
-    } else {
-        if ((write(fd_int, vol_int->device, strlen(vol_int->device)) < 0) &&
-            (!vol_int->device2 || (write(fd_int, vol_int->device, strlen(vol_int->device2)) < 0))) {
-            LOGI("Unable to write to ums lunfile0 (%s)", strerror(errno));
-            close(fd_int);
-            fd_int = -1;
+struct lun_node {
+    const char *lun_file;
+    struct lun_node *next;
+};
+
+static struct lun_node *lun_head = NULL;
+static struct lun_node *lun_tail = NULL;
+
+int control_usb_storage_set_lun(Volume* vol, bool enable, const char *lun_file) {
+    char c = 0;
+    const char *vol_device = enable ? vol->device : &c;
+    int fd;
+    struct lun_node *node;
+
+    // Verify that we have not already used this LUN file
+    for(node = lun_head; node; node = node->next) {
+        if (!strcmp(node->lun_file, lun_file)) {
+            // Skip any LUN files that are already in use
+            return -1;
         }
     }
 
-    if ((fd_ext = open(BOARD_UMS_LUNFILE1, O_WRONLY)) < 0) {
-        LOGI("Unable to open ums lunfile1 (%s)", strerror(errno));
-    } else {
-        if ((write(fd_ext, vol_ext->device, strlen(vol_ext->device)) < 0) &&
-            (!vol_ext->device2 || (write(fd_ext, vol_ext->device, strlen(vol_ext->device2)) < 0))) {
-            LOGI("Unable to write to ums lunfile1 (%s)", strerror(errno));
-            close(fd_ext);
-            fd_ext = -1;
-         }
-    }
-
-    if (fd_int < 0 && fd_ext < 0) {
+    // Open a handle to the LUN file
+    LOGI("Trying %s on LUN file %s\n", vol->device, lun_file);
+    if ((fd = open(lun_file, O_WRONLY)) < 0) {
+        LOGW("Unable to open ums lunfile %s (%s)\n", lun_file, strerror(errno));
         return -1;
     }
 
-    static char* headers[] = {  "USB Mass Storage device",
-                                "Leaving this menu unmount",
-                                "your SD card from your PC.",
-                                "",
-                                NULL
-    };
+    // Write the volume path to the LUN file
+    if ((write(fd, vol_device, strlen(vol_device)) < 0) &&
+       (!enable || !vol->device2 || (write(fd, vol->device2, strlen(vol->device2)) < 0))) {
+        LOGW("Unable to write to ums lunfile %s (%s)\n", lun_file, strerror(errno));
+        close(fd);
+        return -1;
+    } else {
+        // Volume path to LUN association succeeded
+        close(fd);
 
-    static char* list[] = { "Unmount", NULL };
-
-    for (;;)
-    {
-        int chosen_item = get_menu_selection(headers, list, 0, 0);
-        if (chosen_item == GO_BACK || chosen_item == 0)
-            break;
-    }
-
-    if (fd_int != -1) {
-        if ((fd_int = open(BOARD_UMS_LUNFILE0, O_WRONLY)) < 0) {
-            LOGI("Unable to open ums lunfile0 (%s)", strerror(errno));
-        } else {
-            char ch = 0;
-            if (write(fd_int, &ch, 1) < 0) {
-                LOGE("Unable to write to ums lunfile0 (%s)", strerror(errno));
-                close(fd_int);
-            }
+        // Save off a record of this lun_file being in use now
+        node = (struct lun_node *)malloc(sizeof(struct lun_node));
+        node->lun_file = strdup(lun_file);
+        node->next = NULL;
+        if (lun_head == NULL)
+           lun_head = lun_tail = node;
+        else {
+           lun_tail->next = node;
+           lun_tail = node;
         }
-    }
 
-    if (fd_ext != -1) {
-        if ((fd_ext = open(BOARD_UMS_LUNFILE1, O_WRONLY)) < 0) {
-            LOGI("Unable to open ums lunfile1 (%s)", strerror(errno));
-        } else {
-            char ch = 0;
-            if (write(fd_ext, &ch, 1) < 0) {
-                LOGI("Unable to write to ums lunfile1 (%s)", strerror(errno));
-                close(fd_ext);
-            }
-        }
+        LOGI("Successfully %sshared %s on LUN file %s\n", enable ? "" : "un", vol->device, lun_file);
+        return 0;
     }
-
-    return 0;
 }
 
-static int show_mount_usb_storage_menu_int()
-{
-    int fd;
-    Volume *vol = volume_for_path("/sdcard");
-    if ((fd = open(BOARD_UMS_LUNFILE, O_WRONLY)) < 0) {
-        LOGE("Unable to open ums lunfile (%s)", strerror(errno));
-        return -1;
-    }
-
-    if ((write(fd, vol->device, strlen(vol->device)) < 0) &&
-        (!vol->device2 || (write(fd, vol->device, strlen(vol->device2)) < 0))) {
-        LOGE("Unable to write to ums lunfile (%s)", strerror(errno));
-        close(fd);
-        return -1;
-    }
-    static char* headers[] = {  "USB Mass Storage device",
-                                "Leaving this menu unmount",
-                                "your SD card from your PC.",
-                                "",
-                                NULL
+int control_usb_storage_for_lun(Volume* vol, bool enable) {
+    static const char* lun_files[] = {
+#ifdef BOARD_UMS_LUNFILE
+        BOARD_UMS_LUNFILE,
+#endif
+        "/sys/devices/platform/usb_mass_storage/lun%d/file",
+        "/sys/class/android_usb/android0/f_mass_storage/lun/file",
+        "/sys/class/android_usb/android0/f_mass_storage/lun_ex/file",
+        NULL
     };
 
-    static char* list[] = { "Unmount", NULL };
-
-    for (;;)
-    {
-        int chosen_item = get_menu_selection(headers, list, 0, 0);
-        if (chosen_item == GO_BACK || chosen_item == 0)
-            break;
+    // If recovery.fstab specifies a LUN file, use it
+    if (vol->lun) {
+        return control_usb_storage_set_lun(vol, enable, vol->lun);
     }
 
-    if ((fd = open(BOARD_UMS_LUNFILE, O_WRONLY)) < 0) {
-        LOGE("Unable to open ums lunfile (%s)", strerror(errno));
-        return -1;
+    // Try to find a LUN for this volume
+    //   - iterate through the lun file paths
+    //   - expand any %d by LUN_FILE_EXPANDS
+    int lun_num = 0;
+    int i;
+    for(i = 0; lun_files[i]; i++) {
+        const char *lun_file = lun_files[i];
+        for(lun_num = 0; lun_num < LUN_FILE_EXPANDS; lun_num++) {
+            char formatted_lun_file[255];
+    
+            // Replace %d with the LUN number
+            bzero(formatted_lun_file, 255);
+            snprintf(formatted_lun_file, 254, lun_file, lun_num);
+    
+            // Attempt to use the LUN file
+            if (control_usb_storage_set_lun(vol, enable, formatted_lun_file) == 0) {
+                return 0;
+            }
+        }
     }
 
-    char ch = 0;
-    if (write(fd, &ch, 1) < 0) {
-        LOGE("Unable to write to ums lunfile (%s)", strerror(errno));
-        close(fd);
-        return -1;
+    // All LUNs were exhausted and none worked
+    LOGW("Could not %sable %s on LUN %d\n", enable ? "en" : "dis", vol->device, lun_num);
+
+    return -1;  // -1 failure, 0 success
+}
+
+int control_usb_storage(Volume **volumes, bool enable) {
+    int res = -1;
+    int i;
+    for(i = 0; i < MAX_NUM_USB_VOLUMES; i++) {
+        Volume *volume = volumes[i];
+        if (volume) {
+            int vol_res = control_usb_storage_for_lun(volume, enable);
+            if (vol_res == 0) res = 0; // if any one path succeeds, we return success
+        }
     }
 
-    return 0;
+    // Release memory used by the LUN file linked list
+    struct lun_node *node = lun_head;
+    while(node) {
+       struct lun_node *next = node->next;
+       free((void *)node->lun_file);
+       free(node);
+       node = next;
+    }
+    lun_head = lun_tail = NULL;
+
+    return res;  // -1 failure, 0 success
 }
 
 void show_mount_usb_storage_menu()
 {
-    struct stat info;
-    if (0 == stat(BOARD_UMS_LUNFILE1, &info)) {
-        show_mount_usb_storage_menu_int_ext();
-    } else {
-        show_mount_usb_storage_menu_int();
+    // Build a list of Volume objects; some or all may not be valid
+    Volume* volumes[MAX_NUM_USB_VOLUMES] = {
+        volume_for_path("/sdcard"),
+        volume_for_path("/emmc"),
+        volume_for_path("/external_sd")
+    };
+
+    // Enable USB storage
+    if (control_usb_storage(volumes, 1))
+        return;
+
+    static char* headers[] = {  "USB Mass Storage device",
+                                "Leaving this menu unmount",
+                                "your SD card from your PC.",
+                                "",
+                                NULL
+    };
+
+    static char* list[] = { "Unmount", NULL };
+
+    for (;;)
+    {
+        int chosen_item = get_menu_selection(headers, list, 0, 0);
+        if (chosen_item == GO_BACK || chosen_item == 0)
+            break;
     }
+
+    // Disable USB storage
+    control_usb_storage(volumes, 0);
 }
 
 int confirm_selection(const char* title, const char* confirm)
@@ -841,8 +868,8 @@ void show_partition_menu()
                                 NULL
     };
 
-    static MountMenuEntry* mount_menue = NULL;
-    static FormatMenuEntry* format_menue = NULL;
+    static MountMenuEntry* mount_menu = NULL;
+    static FormatMenuEntry* format_menu = NULL;
 
     typedef char* string;
 
@@ -856,35 +883,34 @@ void show_partition_menu()
     string options[255];
 
     if(!device_volumes)
-            return;
+        return;
 
-        mountable_volumes = 0;
-        formatable_volumes = 0;
+    mountable_volumes = 0;
+    formatable_volumes = 0;
 
-        mount_menue = malloc(num_volumes * sizeof(MountMenuEntry));
-        format_menue = malloc(num_volumes * sizeof(FormatMenuEntry));
+    mount_menu = malloc(num_volumes * sizeof(MountMenuEntry));
+    format_menu = malloc(num_volumes * sizeof(FormatMenuEntry));
 
-        for (i = 0; i < num_volumes; ++i) {
-              Volume* v = &device_volumes[i];
-              if(strcmp("ramdisk", v->fs_type) != 0 && strcmp("mtd", v->fs_type) != 0 && strcmp("emmc", v->fs_type) != 0 && strcmp("bml", v->fs_type) != 0) {
-                    sprintf(&mount_menue[mountable_volumes].mount, "mount %s", v->mount_point);
-                    sprintf(&mount_menue[mountable_volumes].unmount, "unmount %s", v->mount_point);
-                    mount_menue[mountable_volumes].v = &device_volumes[i];
-                    ++mountable_volumes;
-                    if (is_safe_to_format(v->mount_point)) {
-                          sprintf(&format_menue[formatable_volumes].txt, "format %s", v->mount_point);
-                          format_menue[formatable_volumes].v = &device_volumes[i];
-                          ++formatable_volumes;
-                    }
+    for (i = 0; i < num_volumes; ++i) {
+        Volume* v = &device_volumes[i];
+        if(strcmp("ramdisk", v->fs_type) != 0 && strcmp("mtd", v->fs_type) != 0 && strcmp("emmc", v->fs_type) != 0 && strcmp("bml", v->fs_type) != 0) {
+            sprintf(&mount_menu[mountable_volumes].mount, "mount %s", v->mount_point);
+            sprintf(&mount_menu[mountable_volumes].unmount, "unmount %s", v->mount_point);
+            mount_menu[mountable_volumes].v = &device_volumes[i];
+            ++mountable_volumes;
+            if (is_safe_to_format(v->mount_point)) {
+                sprintf(&format_menu[formatable_volumes].txt, "format %s", v->mount_point);
+                format_menu[formatable_volumes].v = &device_volumes[i];
+                ++formatable_volumes;
             }
-            else if (strcmp("ramdisk", v->fs_type) != 0 && strcmp("mtd", v->fs_type) == 0 && is_safe_to_format(v->mount_point))
-            {
-                    sprintf(&format_menue[formatable_volumes].txt, "format %s", v->mount_point);
-                    format_menue[formatable_volumes].v = &device_volumes[i];
-                    ++formatable_volumes;
-              }
         }
-
+        else if (strcmp("ramdisk", v->fs_type) != 0 && strcmp("mtd", v->fs_type) == 0 && is_safe_to_format(v->mount_point))
+        {
+            sprintf(&format_menu[formatable_volumes].txt, "format %s", v->mount_point);
+            format_menu[formatable_volumes].v = &device_volumes[i];
+            ++formatable_volumes;
+        }
+    }
 
     static char* confirm_format  = "Confirm format?";
     static char* confirm = "Yes - Format";
@@ -892,22 +918,22 @@ void show_partition_menu()
 
     for (;;)
     {
-            for (i = 0; i < mountable_volumes; i++)
-            {
-                MountMenuEntry* e = &mount_menue[i];
-                Volume* v = e->v;
-                if(is_path_mounted(v->mount_point))
-                    options[i] = e->unmount;
-                else
-                    options[i] = e->mount;
-            }
+        for (i = 0; i < mountable_volumes; i++)
+        {
+            MountMenuEntry* e = &mount_menu[i];
+            Volume* v = e->v;
+            if(is_path_mounted(v->mount_point))
+                options[i] = e->unmount;
+            else
+                options[i] = e->mount;
+        }
 
-            for (i = 0; i < formatable_volumes; i++)
-            {
-                FormatMenuEntry* e = &format_menue[i];
+        for (i = 0; i < formatable_volumes; i++)
+        {
+            FormatMenuEntry* e = &format_menu[i];
 
-                options[mountable_volumes+i] = e->txt;
-            }
+            options[mountable_volumes+i] = e->txt;
+        }
 
 #ifndef BOARD_HAS_SDCARD_EXTERNAL
         if (!is_data_media()) {
@@ -928,7 +954,7 @@ void show_partition_menu()
             show_mount_usb_storage_menu();
         }
         else if (chosen_item < mountable_volumes) {
-                  MountMenuEntry* e = &mount_menue[chosen_item];
+            MountMenuEntry* e = &mount_menu[chosen_item];
             Volume* v = e->v;
 
 #ifdef TARGET_DEVICE_SC02C
@@ -955,7 +981,7 @@ void show_partition_menu()
         else if (chosen_item < (mountable_volumes + formatable_volumes))
         {
             chosen_item = chosen_item - mountable_volumes;
-            FormatMenuEntry* e = &format_menue[chosen_item];
+            FormatMenuEntry* e = &format_menu[chosen_item];
             Volume* v = e->v;
 
             sprintf(confirm_string, "%s - %s", v->mount_point, confirm_format);
@@ -970,8 +996,8 @@ void show_partition_menu()
         }
     }
 
-    free(mount_menue);
-    free(format_menue);
+    free(mount_menu);
+    free(format_menu);
 }
 
 void show_nandroid_advanced_restore_menu(const char* path)
