@@ -19,6 +19,7 @@
 #include <sys/types.h>
 
 #include "libcrecovery/common.h"
+#include "device_config.h"
 
 int multi_mount(const char* device, const char* mount_point, const char* fs_type, const char* fs_options)
 {
