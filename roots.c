@@ -401,7 +401,7 @@ int format_volume(const char* volume) {
     if (v == NULL) {
 #ifdef RECOVERY_MULTI_BOOT
         if (strcmp(volume, "/data") == 0) {
-        	__system("mount /data");
+            __system("mount /data");
             __system("rm -rf /data/*");
             __system("rm -rf /data/.*");
             __system("umount /data");
