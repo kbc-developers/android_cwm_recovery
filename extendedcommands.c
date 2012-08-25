@@ -710,10 +710,12 @@ int format_device(const char *device, const char *path, const char *fs_type) {
 
     if (strcmp(fs_type, "ext4") == 0) {
         int length = 0;
+#if !defined(RECOVERY_MULTI_BOOT)
         if (strcmp(v->fs_type, "ext4") == 0) {
             // Our desired filesystem matches the one in fstab, respect v->length
             length = v->length;
         }
+#endif
         reset_ext4fs_info();
         int result = make_ext4fs(device, length);
         if (result != 0) {
