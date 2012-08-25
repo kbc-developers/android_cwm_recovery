@@ -437,11 +437,7 @@ void show_nandroid_restore_menu(const char* path, int restore_kernel)
         return;
 
     if (confirm_selection("Confirm restore?", "Yes - Restore"))
-#ifdef RECOVERY_MULTI_BOOT
-        nandroid_restore(file, restore_kernel, 1, 1, 0, 1, 0);	//workaround for cache formatting error.
-#else
         nandroid_restore(file, restore_kernel, 1, 1, 1, 1, 0);
-#endif
 }
 
 void show_nandroid_delete_menu(const char* path)
