@@ -189,6 +189,13 @@ static int dedupe_compress_wrapper(const char* backup_path, const char* backup_f
         nandroid_dedupe_gc(blob_dir);
     }
 
+#ifdef RECOVERY_MULTI_BOOT
+    if (strcmp(backup_path, "/data") == 0) {
+        char link_path[PATH_MAX] = { 0 };
+        ssize_t len = readlink(backup_path, link_path, sizeof(link_path));
+        sprintf(tmp, "dedupe c %s %s %s.dup %s", link_path, blob_dir, backup_file_image, "");
+    } else
+#endif
     sprintf(tmp, "dedupe c %s %s %s.dup %s", backup_path, blob_dir, backup_file_image, strcmp(backup_path, "/data") == 0 && is_data_media() ? "./media" : "");
 
     FILE *fp = __popen(tmp, "r");
@@ -588,10 +595,14 @@ int nandroid_restore_partition_extended(const char* backup_path, const char* mou
         // Other devices, like the Galaxy Nexus, XOOM, and Galaxy Tab 10.1
         // have a /sdcard symlinked to /data/media.
         // Or of volume does not exist (.android_secure), just rm -rf.
-        if (vol == NULL || 0 == strcmp(vol->fs_type, "auto"))
+        if (vol != NULL) {
+            if (0 == strcmp(vol->fs_type, "auto"))
+                backup_filesystem = NULL;
+            if (0 == strcmp(vol->mount_point, "/data") && is_data_media())
+                backup_filesystem = NULL;
+        } else {
             backup_filesystem = NULL;
-        if (0 == strcmp(vol->mount_point, "/data") && is_data_media())
-            backup_filesystem = NULL;
+        }
     }
 
     ensure_directory(mount_point);
