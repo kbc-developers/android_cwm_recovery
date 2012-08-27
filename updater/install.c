@@ -412,7 +412,15 @@ Value* PackageExtractFileFn(const char* name, State* state,
 
         char* zip_path;
         char* dest_path;
+        char* kernel_flash;
         if (ReadArgs(state, argv, 2, &zip_path, &dest_path) < 0) return NULL;
+
+        kernel_flash = getenv("KERNEL_FLASH");
+        if (kernel_flash != NULL && kernel_flash[0] == '0' && strstr(dest_path, MMCBLK_BOOT)) {
+            fprintf(stderr, "package_extract_file: skip flash kernel");
+            success = true;
+            goto done2;
+        }
 
         ZipArchive* za = ((UpdaterInfo*)(state->cookie))->package_zip;
         const ZipEntry* entry = mzFindZipEntry(za, zip_path);
