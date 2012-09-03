@@ -62,7 +62,7 @@
 #define MMCBLK_HIDDEN         "mmcblk0p12"
 
 // path
-#define UPDATER_BIN_PATH      "/mbs/recovery/updater"
+#define UPDATER_BIN_PATH      "/sbin/updater"
 
 // key
 #define DEVICE_KEY_HOME       KEY_HOME
