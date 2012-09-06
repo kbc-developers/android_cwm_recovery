@@ -130,6 +130,8 @@ static const int MAX_ARG_LENGTH = 4096;
 static const int MAX_ARGS = 100;
 #ifdef RECOVERY_MULTI_BOOT
 char TARGET_ROM[100];
+char ROM_NAME[8][30] = {0,};
+char is_rom_definition[8];
 int is_boot_error = 0;
 #endif
 
@@ -733,7 +735,7 @@ select_boot_rom(int confirm) {
                                 NULL };
             title_headers = prepend_title((const char**)headers);
         }
-
+#if 0
         char* items[] = { " ROM0",
                           " ROM1",
                           " ROM2",
@@ -743,10 +745,23 @@ select_boot_rom(int confirm) {
                           " ROM6",
                           " ROM7",
                           NULL };
-
+#else
+        char* items[] = { ROM_NAME[0],
+                          ROM_NAME[1],
+                          ROM_NAME[2],
+                          ROM_NAME[3],
+                          ROM_NAME[4],
+                          ROM_NAME[5],
+                          ROM_NAME[6],
+                          ROM_NAME[7],
+                          NULL };
+#endif
         chosen_item = get_menu_selection(title_headers, items, 1, 0);
         if (chosen_item > 7 || chosen_item == GO_BACK) {
             return;
+        }
+        if (!is_rom_definition[chosen_item] ) {
+        	return;
         }
     }
 
@@ -961,12 +976,37 @@ main(int argc, char **argv) {
     ui_print(EXPAND(RECOVERY_VERSION)"\n");
 
 #ifdef RECOVERY_MULTI_BOOT
-    char romId[4] = { 0 };
+    //char romId[4] = { 0 };
+    char romId = 0;
     FILE* fp = fopen("/mbs/stat/bootrom", "rb");
+
+    is_boot_error = 1;
     if (fp) {
-        fread(&romId, 1, 4, fp);
+        //fread(&romId, 1, 4, fp);
+        fscanf( fp , "%d" , &romId );
         fclose(fp);
-        sprintf(TARGET_ROM, "TARGET ROM%s", romId);
+
+		int i;
+		static char info[PATH_MAX];
+		char label[20];
+		for(i=0;i<8;i++)
+		{
+			sprintf(info, "/mbs/stat/rom%d", i);
+			fp = fopen(info, "rb");
+			if (fp) {
+			    fread(label, 20, 1, fp);
+			    fclose(fp);
+			    sprintf(ROM_NAME[i], " ROM%d:%s",i, label);
+			    is_rom_definition[i] = 1;
+
+			    if (i==romId) {
+			    	sprintf(TARGET_ROM, "TARGET ROM%d:%s", romId,label);
+			    	is_boot_error = 0;
+			    }
+			} else {
+			    is_rom_definition[i] = 0;
+			}
+		}
     } else {
         ui_print("error: not found /mbs/stat/bootrom\n");
         is_boot_error = 1;
