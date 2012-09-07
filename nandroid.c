@@ -67,9 +67,9 @@ void nandroid_generate_timestamp_path(const char* backup_path)
     else
     {
 	#ifdef RECOVERY_MULTI_BOOT
-		char format[PATH_MAX];
-		sprintf(format,"/sdcard/clockworkmod/backup/%s_%%F.%%H.%%M.%%S",CURR_ROM_NAME);
-		strftime(backup_path, PATH_MAX, format, tmp);
+		char timestr[PATH_MAX];
+		strftime(timestr, PATH_MAX, "%F.%H.%M.%S", tmp);
+		sprintf(backup_path,"/sdcard/clockworkmod/backup/%s_%s",CURR_ROM_NAME,timestr);
     #else
         strftime(backup_path, PATH_MAX, "/sdcard/clockworkmod/backup/%F.%H.%M.%S", tmp);
 	#endif

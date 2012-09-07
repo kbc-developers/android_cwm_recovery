@@ -57,6 +57,7 @@ int script_updater_binary = 0;
 static const char *SDCARD_UPDATE_FILE = "/sdcard/update.zip";
 #ifdef RECOVERY_MULTI_BOOT
 extern char TARGET_ROM[];
+extern char CURR_ROM_NAME[];
 #endif
 
 int
@@ -1140,7 +1141,15 @@ void show_nandroid_menu()
                 }
                 else
                 {
+				#ifdef RECOVERY_MULTI_BOOT
+					char timestr[PATH_MAX];
+					strftime(timestr, PATH_MAX, "%F.%H.%M.%S", timeptr);
+					sprintf(backup_path,"/sdcard/clockworkmod/backup/%s_%s",CURR_ROM_NAME,timestr);
+					ui_print("backup to %s\n",backup_path);
+					fprintf(stderr, "backup to %s\n",backup_path);
+			    #else
                     strftime(backup_path, sizeof(backup_path), "/sdcard/clockworkmod/backup/%F.%H.%M.%S", timeptr);
+                #endif
                 }
                 nandroid_backup(backup_path);
             }
@@ -1180,7 +1189,13 @@ void show_nandroid_menu()
                 }
                 else
                 {
+				#ifdef RECOVERY_MULTI_BOOT
+					char timestr[PATH_MAX];
+					strftime(timestr, PATH_MAX, "%F.%H.%M.%S", timeptr);
+					sprintf(backup_path,"/emmc/clockworkmod/backup/%s_%s",CURR_ROM_NAME,timestr);
+			    #else
                     strftime(backup_path, sizeof(backup_path), "/emmc/clockworkmod/backup/%F.%H.%M.%S", timeptr);
+                #endif
                 }
                 nandroid_backup(backup_path);
             }
