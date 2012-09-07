@@ -1002,8 +1002,8 @@ main(int argc, char **argv) {
 			    is_rom_definition[i] = 1;
 
 			    if (i==romId) {
-			    	
-			    	sprintf(CURR_ROM_NAME, "rom%d.%s", romId,label);
+			    	//sprintf(CURR_ROM_NAME, "rom%d.%s", romId,label);
+			    	sprintf(CURR_ROM_NAME, "rom%d", romId);
 			    	sprintf(TARGET_ROM, "TARGET ROM%d:%s", romId,label);
 			    	is_boot_error = 0;
 			    }

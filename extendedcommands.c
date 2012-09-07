@@ -1145,6 +1145,8 @@ void show_nandroid_menu()
 					char timestr[PATH_MAX];
 					strftime(timestr, PATH_MAX, "%F.%H.%M.%S", timeptr);
 					sprintf(backup_path,"/sdcard/clockworkmod/backup/%s_%s",CURR_ROM_NAME,timestr);
+					ui_print("backup to %s\n",backup_path);
+					fprintf(stderr, "backup to %s\n",backup_path);
 			    #else
                     strftime(backup_path, sizeof(backup_path), "/sdcard/clockworkmod/backup/%F.%H.%M.%S", timeptr);
                 #endif
