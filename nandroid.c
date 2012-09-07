@@ -42,6 +42,10 @@
 #include "flashutils/flashutils.h"
 #include <libgen.h>
 
+#ifdef RECOVERY_MULTI_BOOT
+extern char CURR_ROM_NAME[];
+#endif
+
 void nandroid_generate_timestamp_path(const char* backup_path)
 {
 #ifdef RECOVERY_TZ_JPN
@@ -53,13 +57,25 @@ void nandroid_generate_timestamp_path(const char* backup_path)
     if (tmp == NULL)
     {
         struct timeval tp;
+	#ifdef RECOVERY_MULTI_BOOT
+		sprintf(backup_path, "/sdcard/clockworkmod/backup/%s_%d",CURR_ROM_NAME, tp.tv_sec);
+    #else
         gettimeofday(&tp, NULL);
         sprintf(backup_path, "/sdcard/clockworkmod/backup/%d", tp.tv_sec);
+    #endif
     }
     else
     {
+	#ifdef RECOVERY_MULTI_BOOT
+		char format[PATH_MAX];
+		sprintf(format,"/sdcard/clockworkmod/backup/%s_%%F.%%H.%%M.%%S",CURR_ROM_NAME);
+		strftime(backup_path, PATH_MAX, format, tmp);
+    #else
         strftime(backup_path, PATH_MAX, "/sdcard/clockworkmod/backup/%F.%H.%M.%S", tmp);
+	#endif
+    
     }
+
 }
 
 static void ensure_directory(const char* dir) {
