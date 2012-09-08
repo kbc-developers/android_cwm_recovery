@@ -57,7 +57,6 @@ int script_updater_binary = 0;
 static const char *SDCARD_UPDATE_FILE = "/sdcard/update.zip";
 #ifdef RECOVERY_MULTI_BOOT
 extern char TARGET_ROM[];
-extern char CURR_ROM_NAME[];
 #endif
 
 int
@@ -1127,30 +1126,7 @@ void show_nandroid_menu()
         case 0: // backup to internal sdcard
             {
                 char backup_path[PATH_MAX];
-#ifdef RECOVERY_TZ_JPN
-                time_t t = time(NULL) + (60 * 60 * 9); // add 9 hours
-#else
-                time_t t = time(NULL);
-#endif
-                struct tm *timeptr = localtime(&t);
-                if (timeptr == NULL)
-                {
-                    struct timeval tp;
-                    gettimeofday(&tp, NULL);
-                    sprintf(backup_path, "/sdcard/clockworkmod/backup/%d", tp.tv_sec);
-                }
-                else
-                {
-				#ifdef RECOVERY_MULTI_BOOT
-					char timestr[PATH_MAX];
-					strftime(timestr, PATH_MAX, "%F.%H.%M.%S", timeptr);
-					sprintf(backup_path,"/sdcard/clockworkmod/backup/%s_%s",CURR_ROM_NAME,timestr);
-					ui_print("backup to %s\n",backup_path);
-					fprintf(stderr, "backup to %s\n",backup_path);
-			    #else
-                    strftime(backup_path, sizeof(backup_path), "/sdcard/clockworkmod/backup/%F.%H.%M.%S", timeptr);
-                #endif
-                }
+				nandroid_generate_timestamp_path(backup_path,BASE_INTERNAL);
                 nandroid_backup(backup_path);
             }
             break;
@@ -1175,28 +1151,7 @@ void show_nandroid_menu()
         case 7: // backup to external sdcard
             {
                 char backup_path[PATH_MAX];
-#ifdef RECOVERY_TZ_JPN
-                time_t t = time(NULL) + (60 * 60 * 9); // add 9 hours
-#else
-                time_t t = time(NULL);
-#endif
-                struct tm *timeptr = localtime(&t);
-                if (timeptr == NULL)
-                {
-                    struct timeval tp;
-                    gettimeofday(&tp, NULL);
-                    sprintf(backup_path, "/emmc/clockworkmod/backup/%d", tp.tv_sec);
-                }
-                else
-                {
-				#ifdef RECOVERY_MULTI_BOOT
-					char timestr[PATH_MAX];
-					strftime(timestr, PATH_MAX, "%F.%H.%M.%S", timeptr);
-					sprintf(backup_path,"/emmc/clockworkmod/backup/%s_%s",CURR_ROM_NAME,timestr);
-			    #else
-                    strftime(backup_path, sizeof(backup_path), "/emmc/clockworkmod/backup/%F.%H.%M.%S", timeptr);
-                #endif
-                }
+				nandroid_generate_timestamp_path(backup_path,BASE_EXTERNAL);
                 nandroid_backup(backup_path);
             }
             break;

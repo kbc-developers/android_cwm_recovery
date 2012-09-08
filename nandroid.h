@@ -7,6 +7,12 @@ int nandroid_restore(const char* backup_path, int restore_boot, int restore_syst
 void nandroid_dedupe_gc(const char* blob_dir);
 void nandroid_force_backup_format(const char* fmt);
 
+
+#define BASE_INTERNAL	0
+#define BASE_EXTERNAL	1
+void nandroid_generate_timestamp_path(const char* backup_path , int base);
+
+
 #define NANDROID_BACKUP_FORMAT_FILE "/sdcard/clockworkmod/.default_backup_format"
 
 #endif
