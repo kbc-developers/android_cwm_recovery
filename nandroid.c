@@ -46,36 +46,40 @@
 extern char CURR_ROM_NAME[];
 #endif
 
-void nandroid_generate_timestamp_path(const char* backup_path)
+#define INTERNAL_SD	"/sdcard/clockworkmod/backup"
+#define EXTERNAL_SD	"/emmc/clockworkmod/backup"
+static const char* backup_base[] = 
+{
+	INTERNAL_SD,
+	EXTERNAL_SD,
+};
+
+
+void nandroid_generate_timestamp_path(const char* backup_path , int base)
 {
 #ifdef RECOVERY_TZ_JPN
     time_t t = time(NULL) + (60 * 60 * 9); // add 9 hours
 #else
     time_t t = time(NULL);
 #endif
+
+	char timestr[PATH_MAX];
     struct tm *tmp = localtime(&t);
     if (tmp == NULL)
     {
         struct timeval tp;
-	#ifdef RECOVERY_MULTI_BOOT
-		sprintf(backup_path, "/sdcard/clockworkmod/backup/%s_%d",CURR_ROM_NAME, tp.tv_sec);
-    #else
-        gettimeofday(&tp, NULL);
-        sprintf(backup_path, "/sdcard/clockworkmod/backup/%d", tp.tv_sec);
-    #endif
+        sprintf(timestr, "%d", tp.tv_sec);
     }
     else
     {
-	#ifdef RECOVERY_MULTI_BOOT
-		char timestr[PATH_MAX];
-		strftime(timestr, PATH_MAX, "%F.%H.%M.%S", tmp);
-		sprintf(backup_path,"/sdcard/clockworkmod/backup/%s_%s",CURR_ROM_NAME,timestr);
-    #else
-        strftime(backup_path, PATH_MAX, "/sdcard/clockworkmod/backup/%F.%H.%M.%S", tmp);
-	#endif
+    	strftime(timestr, PATH_MAX, "%F.%H.%M.%S", tmp);
     
     }
-
+#ifdef RECOVERY_MULTI_BOOT
+	sprintf(backup_path,"%s/%s_%s",backup_base[base],CURR_ROM_NAME,timestr);
+#else
+    sprintf(backup_path,"%s/%s",backup_base[base],timestr);
+#endif
 }
 
 static void ensure_directory(const char* dir) {
@@ -788,7 +792,7 @@ int nandroid_main(int argc, char** argv)
             return nandroid_usage();
         
         char backup_path[PATH_MAX];
-        nandroid_generate_timestamp_path(backup_path);
+        nandroid_generate_timestamp_path(backup_path,BASE_INTERNAL);
         return nandroid_backup(backup_path);
     }
 
