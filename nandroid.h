@@ -8,8 +8,8 @@ void nandroid_dedupe_gc(const char* blob_dir);
 void nandroid_force_backup_format(const char* fmt);
 
 
-#define BASE_INTERNAL	0
-#define BASE_EXTERNAL	1
+#define BASE_INTERNAL 0
+#define BASE_EXTERNAL 1
 void nandroid_generate_timestamp_path(const char* backup_path , int base);
 
 

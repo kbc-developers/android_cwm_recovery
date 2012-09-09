@@ -46,12 +46,12 @@
 extern char CURR_ROM_NAME[];
 #endif
 
-#define INTERNAL_SD	"/sdcard/clockworkmod/backup"
-#define EXTERNAL_SD	"/emmc/clockworkmod/backup"
+#define INTERNAL_SD    "/sdcard/clockworkmod/backup"
+#define EXTERNAL_SD    "/emmc/clockworkmod/backup"
 static const char* backup_base[] = 
 {
-	INTERNAL_SD,
-	EXTERNAL_SD,
+    INTERNAL_SD,
+    EXTERNAL_SD,
 };
 
 
@@ -63,22 +63,19 @@ void nandroid_generate_timestamp_path(const char* backup_path , int base)
     time_t t = time(NULL);
 #endif
 
-	char timestr[PATH_MAX];
+    char timestr[PATH_MAX];
     struct tm *tmp = localtime(&t);
-    if (tmp == NULL)
-    {
+    if (tmp == NULL) {
         struct timeval tp;
+        gettimeofday(&tp, NULL);
         sprintf(timestr, "%d", tp.tv_sec);
-    }
-    else
-    {
-    	strftime(timestr, PATH_MAX, "%F.%H.%M.%S", tmp);
-    
+    } else {
+        strftime(timestr, PATH_MAX, "%F.%H.%M.%S", tmp);
     }
 #ifdef RECOVERY_MULTI_BOOT
-	sprintf(backup_path,"%s/%s_%s",backup_base[base],CURR_ROM_NAME,timestr);
+    sprintf(backup_path, "%s/%s_%s", backup_base[base], CURR_ROM_NAME, timestr);
 #else
-    sprintf(backup_path,"%s/%s",backup_base[base],timestr);
+    sprintf(backup_path, "%s/%s", backup_base[base], timestr);
 #endif
 }
 
@@ -792,7 +789,7 @@ int nandroid_main(int argc, char** argv)
             return nandroid_usage();
         
         char backup_path[PATH_MAX];
-        nandroid_generate_timestamp_path(backup_path,BASE_INTERNAL);
+        nandroid_generate_timestamp_path(backup_path, BASE_INTERNAL);
         return nandroid_backup(backup_path);
     }
 

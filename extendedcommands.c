@@ -1126,7 +1126,7 @@ void show_nandroid_menu()
         case 0: // backup to internal sdcard
             {
                 char backup_path[PATH_MAX];
-				nandroid_generate_timestamp_path(backup_path,BASE_INTERNAL);
+                nandroid_generate_timestamp_path(backup_path, BASE_INTERNAL);
                 nandroid_backup(backup_path);
             }
             break;
@@ -1151,7 +1151,7 @@ void show_nandroid_menu()
         case 7: // backup to external sdcard
             {
                 char backup_path[PATH_MAX];
-				nandroid_generate_timestamp_path(backup_path,BASE_EXTERNAL);
+                nandroid_generate_timestamp_path(backup_path, BASE_EXTERNAL);
                 nandroid_backup(backup_path);
             }
             break;
