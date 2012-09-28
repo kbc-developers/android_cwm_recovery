@@ -1164,6 +1164,11 @@ main(int argc, char **argv) {
 
     int status = INSTALL_SUCCESS;
 
+    if (wipe_data) {
+        wipe_data = 0;
+        ui_print("Don't support wipe data from system, force disabled.\n");
+    }
+
     if (update_package != NULL) {
         status = install_package(update_package);
         if (status != INSTALL_SUCCESS) ui_print("Installation aborted.\n");
