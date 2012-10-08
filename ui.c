@@ -570,6 +570,20 @@ static void *input_thread(void *cookie)
     return NULL;
 }
 
+#define UI_PARAMETER_FILE	"/res/ui_parameters"
+void ui_init_parameters(void)
+{
+	FILE* f = fopen(UI_PARAMETER_FILE, "rt");
+	if (f != NULL) {
+		fscanf(f,"%d,%d,%d,%d,%d",
+			    &ui_parameters.indeterminate_frames,
+			    &ui_parameters.update_fps,
+			    &ui_parameters.installing_frames,
+			    &ui_parameters.install_overlay_offset_x,
+			    &ui_parameters.install_overlay_offset_y);
+	}
+}
+
 void ui_init(void)
 {
     ui_has_initialized = 1;
@@ -578,6 +592,7 @@ void ui_init(void)
 #ifdef BOARD_TOUCH_RECOVERY
     touch_init();
 #endif
+	ui_init_parameters();
 
     text_col = text_row = 0;
     text_rows = gr_fb_height() / CHAR_HEIGHT;
