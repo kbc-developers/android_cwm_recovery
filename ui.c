@@ -233,11 +233,24 @@ static void draw_text_line(int row, const char* t) {
 }
 
 //#define MENU_TEXT_COLOR 255, 160, 49, 255
+typedef struct
+{
+	unsigned char r;
+	unsigned char g;
+	unsigned char b;
+	unsigned char a;
+}UITextColor;
+
+UITextColor ui_menu_text_color =
+{
 #ifdef RECOVERY_MULTI_BOOT
-#define MENU_TEXT_COLOR 219, 168, 0, 255 // v5 galaxys2 multi
+	219, 168, 0, 255,
 #else
-#define MENU_TEXT_COLOR 0, 191, 255, 255 // v5 original
+	0, 191, 255, 255,
 #endif
+};
+#define MENU_TEXT_COLOR ui_menu_text_color.r,ui_menu_text_color.g,ui_menu_text_color.b,ui_menu_text_color.a
+
 #define NORMAL_TEXT_COLOR 200, 200, 200, 255
 #define HEADER_TEXT_COLOR NORMAL_TEXT_COLOR
 
@@ -571,17 +584,46 @@ static void *input_thread(void *cookie)
 }
 
 #define UI_PARAMETER_FILE	"/res/ui_parameters"
+#define STR_MAX	256
 void ui_init_parameters(void)
 {
+	int i = 0, j = 0;
+	char str[STR_MAX], param[STR_MAX];
 	FILE* f = fopen(UI_PARAMETER_FILE, "rt");
 	if (f != NULL) {
-		fscanf(f,"%d,%d,%d,%d,%d",
-			    &ui_parameters.indeterminate_frames,
-			    &ui_parameters.update_fps,
-			    &ui_parameters.installing_frames,
-			    &ui_parameters.install_overlay_offset_x,
-			    &ui_parameters.install_overlay_offset_y);
+		for(;;) {
+			if (fgets(str, STR_MAX, f) == NULL) {
+				break;	// eof
+			}
+			if(str[0] == '#') {
+				continue;	//skip comment line
+			}
+			
+			if (!strncmp(str, "ui_parameters", strlen("ui_parameters"))) {
+				while (str[i++] != '=') {
+					;
+				}
+				sscanf(&str[i],"%d,%d,%d,%d,%d",
+					&ui_parameters.indeterminate_frames,
+					&ui_parameters.update_fps,
+					&ui_parameters.installing_frames,
+					&ui_parameters.install_overlay_offset_x,
+					&ui_parameters.install_overlay_offset_y);
+			}
+			if (!strncmp(str, "ui_menu_text_color", strlen("ui_menu_text_color"))) {
+				while (str[i++] != '=') {
+					;
+				}
+				sscanf(&str[i],"%d,%d,%d,%d",
+					&ui_menu_text_color.r,
+					&ui_menu_text_color.g,
+					&ui_menu_text_color.b,
+					&ui_menu_text_color.a);
+			}
+		}
 	}
+	fclose(f);
+
 }
 
 void ui_init(void)
