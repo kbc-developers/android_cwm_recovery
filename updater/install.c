@@ -1226,4 +1226,3 @@ void RegisterInstallFunctions() {
 
     RegisterFunction("run_program", RunProgramFn);
 }
-
