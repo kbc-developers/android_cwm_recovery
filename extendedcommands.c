@@ -467,10 +467,11 @@ void show_nandroid_delete_menu(const char* path)
 
 static int show_mount_usb_storage_menu_int_ext()
 {
-    int fd_int, fd_ext;
+    int fd_int = -1, fd_ext = -1;
     Volume *vol_int = volume_for_path("/sdcard");
     Volume *vol_ext = volume_for_path("/emmc");
 
+#ifdef BOARD_UMS_LUNFILE0
     if ((fd_int = open(BOARD_UMS_LUNFILE0, O_WRONLY)) < 0) {
         LOGI("Unable to open ums lunfile0 (%s)", strerror(errno));
     } else {
@@ -481,7 +482,9 @@ static int show_mount_usb_storage_menu_int_ext()
             fd_int = -1;
         }
     }
+#endif
 
+#ifdef BOARD_UMS_LUNFILE1
     if ((fd_ext = open(BOARD_UMS_LUNFILE1, O_WRONLY)) < 0) {
         LOGI("Unable to open ums lunfile1 (%s)", strerror(errno));
     } else {
@@ -492,6 +495,7 @@ static int show_mount_usb_storage_menu_int_ext()
             fd_ext = -1;
          }
     }
+#endif
 
     if (fd_int < 0 && fd_ext < 0) {
         return -1;
@@ -513,6 +517,7 @@ static int show_mount_usb_storage_menu_int_ext()
             break;
     }
 
+#ifdef BOARD_UMS_LUNFILE0
     if (fd_int != -1) {
         if ((fd_int = open(BOARD_UMS_LUNFILE0, O_WRONLY)) < 0) {
             LOGI("Unable to open ums lunfile0 (%s)", strerror(errno));
@@ -524,7 +529,9 @@ static int show_mount_usb_storage_menu_int_ext()
             }
         }
     }
+#endif
 
+#ifdef BOARD_UMS_LUNFILE1
     if (fd_ext != -1) {
         if ((fd_ext = open(BOARD_UMS_LUNFILE1, O_WRONLY)) < 0) {
             LOGI("Unable to open ums lunfile1 (%s)", strerror(errno));
@@ -536,6 +543,7 @@ static int show_mount_usb_storage_menu_int_ext()
             }
         }
     }
+#endif
 
     return 0;
 }
@@ -589,11 +597,12 @@ static int show_mount_usb_storage_menu_int()
 void show_mount_usb_storage_menu()
 {
     struct stat info;
+#ifdef BOARD_UMS_LUNFILE1
     if (0 == stat(BOARD_UMS_LUNFILE1, &info)) {
         show_mount_usb_storage_menu_int_ext();
-    } else {
+    } else
+#endif
         show_mount_usb_storage_menu_int();
-    }
 }
 
 int confirm_selection(const char* title, const char* confirm)
@@ -1258,7 +1267,7 @@ void show_advanced_menu()
     };
 
     static char* list[] = { "reboot recovery",
-                            "reboot download",
+                            "reboot "REBOOT_BOOTLOADER_CMD,
                             "root hacking",
                             "wipe dalvik cache",
                             "wipe battery stats",
@@ -1293,7 +1302,7 @@ void show_advanced_menu()
                 android_reboot(ANDROID_RB_RESTART2, 0, "recovery");
                 break;
             case 1: // reboot download
-                android_reboot(ANDROID_RB_RESTART2, 0, "download");
+                android_reboot(ANDROID_RB_RESTART2, 0, REBOOT_BOOTLOADER_CMD);
                 break;
             case 2: // root hacking
                 ensure_path_mounted("/system");

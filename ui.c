@@ -454,7 +454,6 @@ static int input_callback(int fd, short revents, void *data)
         }
 #ifdef RECOVERY_TOUCH_GESTURE
     } else if (ev.type == EV_ABS) {
-        //LOGE("ev code=%d value=%d\n", ev.code, ev.value);
         if (ev.code == ABS_MT_SLOT) {
             s_cur_slot = ev.value;
             return 0;
@@ -463,6 +462,39 @@ static int input_callback(int fd, short revents, void *data)
             // use slot0 only
             return 0;
         }
+
+#if 0
+        switch (ev.code) {
+        case ABS_MT_TRACKING_ID:
+            LOGE("ev code=ABS_MT_TRACKING_ID value=%d\n", ev.value);
+            break;
+        case ABS_MT_ORIENTATION:
+            LOGE("ev code=ABS_MT_ORIENTATION value=%d\n", ev.value);
+            break;
+        case ABS_MT_POSITION_X:
+            LOGE("ev code=ABS_MT_POSITION_X value=%d\n", ev.value);
+            break;
+        case ABS_MT_POSITION_Y:
+            LOGE("ev code=ABS_MT_POSITION_Y value=%d\n", ev.value);
+            break;
+        case ABS_MT_TOUCH_MAJOR:
+            LOGE("ev code=ABS_MT_TOUCH_MAJOR value=%d\n", ev.value);
+            break;
+        case ABS_MT_TOUCH_MINOR:
+            LOGE("ev code=ABS_MT_TOUCH_MINOR value=%d\n", ev.value);
+            break;
+        case ABS_MT_BLOB_ID:
+            LOGE("ev code=ABS_MT_BLOB_ID value=%d\n", ev.value);
+            break;
+        case ABS_MT_TOOL_TYPE:
+            LOGE("ev code=ABS_MT_TOOL_TYPE value=%d\n", ev.value);
+            break;
+        case ABS_MT_PRESSURE:
+            LOGE("ev code=ABS_MT_PRESSURE value=%d\n", ev.value);
+            break;
+	}
+#endif
+
         if (ev.code == ABS_MT_TRACKING_ID) {
             s_tracking_id = ev.value;
             if (s_tracking_id == -1) {
@@ -489,7 +521,6 @@ static int input_callback(int fd, short revents, void *data)
                     return 0;
                 }
             }
-
         }
         if (s_tracking_id != -1) {
             if (ev.code == ABS_MT_POSITION_Y) {

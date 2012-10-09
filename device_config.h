@@ -40,6 +40,9 @@
 #define GESTURE_BACK_SWIPE_THRED     (200)
 #define GESTURE_TOUCH_THRED          (3)
 
+// strings
+#define REBOOT_BOOTLOADER_CMD "download"
+
 // option
 #define BOARD_HAS_SDCARD_EXTERNAL
 
@@ -71,6 +74,37 @@
 #define GESTURE_UD_SWIPE_THRED       (20)
 #define GESTURE_BACK_SWIPE_THRED     (100)
 #define GESTURE_TOUCH_THRED          (1)
+
+// strings
+#define REBOOT_BOOTLOADER_CMD "download"
+
+// option
+#define BOARD_HAS_SDCARD_EXTERNAL
+
+#endif
+// --------------------------------------------------------
+
+// SO03C --------------------------------------------------
+#ifdef TARGET_DEVICE_SO03C
+// ums
+#define BOARD_UMS_LUNFILE     "/sys/devices/virtual/android_usb/android0/f_mass_storage/lun/file"
+
+// mmcblk
+#define MMCBLK_BOOT           "mtdblock4"
+
+// path
+#define UPDATER_BIN_PATH      "/sbin/updater"
+
+// key
+#define DEVICE_KEY_HOME       KEY_HOME
+
+// gesture
+#define GESTURE_UD_SWIPE_THRED       (30)
+#define GESTURE_BACK_SWIPE_THRED     (100)
+#define GESTURE_TOUCH_THRED          (3)
+
+// strings
+#define REBOOT_BOOTLOADER_CMD "bootloader"
 
 // option
 #define BOARD_HAS_SDCARD_EXTERNAL
