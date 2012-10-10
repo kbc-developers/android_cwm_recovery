@@ -521,9 +521,8 @@ static int input_callback(int fd, short revents, void *data)
                     return 0;
                 }
             }
-        }
-        if (s_tracking_id != -1) {
-            if (ev.code == ABS_MT_POSITION_Y) {
+        } else if (ev.code == ABS_MT_POSITION_Y) {
+            if (s_tracking_id != -1) {
                 if (s_last_y == GESTURE_NULL_POS) {
                     s_first_y = s_last_y = ev.value;
                 } else {
@@ -546,7 +545,9 @@ static int input_callback(int fd, short revents, void *data)
                         }
                     }
                 }
-            } else if (ev.code == ABS_MT_POSITION_X) {
+            }
+        } else if (ev.code == ABS_MT_POSITION_X) {
+            if (s_tracking_id != -1) {
                 if (s_last_x == GESTURE_NULL_POS) {
                     s_first_x = s_last_x = ev.value;
                 } else {
