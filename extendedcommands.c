@@ -1299,7 +1299,11 @@ void show_advanced_menu()
         switch (chosen_item)
         {
             case 0: // reboot recovery
+#ifdef RECOVERY_USE_POST_RECOVERY_BOOT
+                __system("sh /sbin/postrecoveryboot.sh");
+#else
                 android_reboot(ANDROID_RB_RESTART2, 0, "recovery");
+#endif
                 break;
             case 1: // reboot download
                 android_reboot(ANDROID_RB_RESTART2, 0, REBOOT_BOOTLOADER_CMD);

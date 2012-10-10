@@ -107,6 +107,7 @@
 #define REBOOT_BOOTLOADER_CMD "bootloader"
 
 // option
+#define RECOVERY_USE_POST_RECOVERY_BOOT
 #define BOARD_HAS_SDCARD_EXTERNAL
 
 #endif
