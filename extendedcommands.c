@@ -135,18 +135,18 @@ int install_zip(const char* packagefilepath)
 }
 
 char* INSTALL_MENU_ITEMS[] = {  "choose zip from internal sdcard",
-                                "choose zip from external sdcard",
                                 "apply /sdcard/update.zip",
                                 "toggle signature verification",
                                 "toggle kernel flash",
                                 "toggle updater binary",
+                                "choose zip from external sdcard",
                                 NULL };
 #define ITEM_CHOOSE_ZIP_INT   (0)
-#define ITEM_CHOOSE_ZIP_EXT   (1)
-#define ITEM_APPLY_SDCARD     (2)
-#define ITEM_SIG_CHECK        (3)
-#define ITEM_KERNEL_FLASH     (4)
-#define ITEM_UPDATER_BINARY   (5)
+#define ITEM_APPLY_SDCARD     (1)
+#define ITEM_SIG_CHECK        (2)
+#define ITEM_KERNEL_FLASH     (3)
+#define ITEM_UPDATER_BINARY   (4)
+#define ITEM_CHOOSE_ZIP_EXT   (5)
 
 void show_install_update_menu()
 {
@@ -159,7 +159,7 @@ void show_install_update_menu()
     };
     
     if (volume_for_path("/emmc") == NULL)
-        INSTALL_MENU_ITEMS[ITEM_CHOOSE_ZIP_INT] = NULL;
+        INSTALL_MENU_ITEMS[ITEM_CHOOSE_ZIP_EXT] = NULL;
     
     for (;;)
     {
@@ -1127,7 +1127,7 @@ void show_nandroid_menu()
     };
 
     if (volume_for_path("/emmc") == NULL)
-        list[6] = NULL;
+        list[7] = NULL;
 
     int chosen_item = get_menu_selection(headers, list, 0, 0);
     switch (chosen_item)
