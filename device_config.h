@@ -41,6 +41,7 @@
 #define GESTURE_TOUCH_THRED          (3)
 
 // strings
+#define DEVICE_NAME "SC06D"
 #define REBOOT_BOOTLOADER_CMD "download"
 
 // option
@@ -76,6 +77,7 @@
 #define GESTURE_TOUCH_THRED          (1)
 
 // strings
+#define DEVICE_NAME "SC02C"
 #define REBOOT_BOOTLOADER_CMD "download"
 
 // option
@@ -104,6 +106,7 @@
 #define GESTURE_TOUCH_THRED          (3)
 
 // strings
+#define DEVICE_NAME "SO03C"
 #define REBOOT_BOOTLOADER_CMD "bootloader"
 
 // option

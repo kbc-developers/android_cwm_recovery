@@ -14,37 +14,41 @@
 
 #!/sbin/sh
 
-# cleaning
-if [ -f /system/app/SGS3RootingApp.apk ]; then
-  rm /system/app/SGS3RootingApp.apk
-fi
-if [ -f /system/bin/setuid_wrapper ]; then
-  rm /system/bin/setuid_wrapper
-fi
-if [ -f /system/bin/busybox_file ]; then
-  rm /system/etc/busybox_file
-fi
-if [ -f /system/etc/su_file ]; then
-  rm /system/etc/su_file
-fi
-if [ -f /system/etc/rooting.sh ]; then
-  rm /system/etc/rooting.sh
-fi
+DEVICE_NAME=$1
+ROM_VER=$2
 
-# setup
-cp /vendor/rooting_kit/toolbox /system/bin/toolbox
-chown root.shell /system/bin/toolbox
-chmod 755 /system/bin/toolbox
+if [ "$DEVICE_NAME" == 'SC06D' ]; then
+    # cleaning
+    if [ -f /system/app/SGS3RootingApp.apk ]; then
+        rm /system/app/SGS3RootingApp.apk
+    fi
+    if [ -f /system/bin/setuid_wrapper ]; then
+        rm /system/bin/setuid_wrapper
+    fi
+    if [ -f /system/bin/busybox_file ]; then
+        rm /system/etc/busybox_file
+    fi
+    if [ -f /system/etc/su_file ]; then
+        rm /system/etc/su_file
+    fi
+    if [ -f /system/etc/rooting.sh ]; then
+        rm /system/etc/rooting.sh
+    fi
 
-cp /vendor/rooting_kit/busybox_mount /system/bin/busybox_mount
-chown root.shell /system/bin/busybox_mount
-chmod 755 /system/bin/busybox_mount
+    # setup
+    cp /vendor/rooting_kit/sc06d/toolbox /system/bin/toolbox
+    chown root.shell /system/bin/toolbox
+    chmod 755 /system/bin/toolbox
 
-rm /system/bin/fsslcmnd
+    cp /vendor/rooting_kit/sc06d/busybox_mount /system/bin/busybox_mount
+    chown root.shell /system/bin/busybox_mount
+    chmod 755 /system/bin/busybox_mount
 
+    rm /system/bin/fsslcmnd
+fi
 
 # busybox
-cp /vendor/rooting_kit/busybox /system/xbin/busybox
+cp /vendor/rooting_kit/ics/busybox /system/xbin/busybox
 chown root.shell /system/xbin/busybox
 chmod 755 /system/xbin/busybox
 ln -sf busybox /system/xbin/[
@@ -396,12 +400,7 @@ ln -sf busybox /system/xbin/zcat
 ln -sf busybox /system/xbin/zcip
 
 # su
-cp /vendor/rooting_kit/su /system/bin/su
+cp /vendor/rooting_kit/ics/su /system/bin/su
 chown root.root /system/bin/su
 chmod 6755 /system/bin/su
 ln -sf /system/bin/su /system/xbin/su
-
-# SuperUser
-#cp /vendor/rooting_kit/SuperUser.apk /system/bin/app
-#chown root.root /system/app/SuperUser.apk
-#chmod 644 /system/app/SuperUser.apk

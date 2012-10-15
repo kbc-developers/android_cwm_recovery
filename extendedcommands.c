@@ -1312,7 +1312,7 @@ void show_advanced_menu()
                 ensure_path_mounted("/system");
                 ensure_path_mounted("/data");
                 ui_print("Root hacking...\n");
-                __system("root_hacking");
+                __system("root_hacking " DEVICE_NAME);
                 ui_print("Done!\n");
                 break;
             case 3: // wipe dalvik cache
