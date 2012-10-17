@@ -248,7 +248,12 @@ UITextColor ui_menu_text_color = {
 };
 #define MENU_TEXT_COLOR ui_menu_text_color.r,ui_menu_text_color.g,ui_menu_text_color.b,ui_menu_text_color.a
 
-#define NORMAL_TEXT_COLOR 200, 200, 200, 255
+
+UITextColor ui_normal_text_color =
+{
+	200, 200, 200, 255
+};
+#define NORMAL_TEXT_COLOR ui_normal_text_color.r,ui_normal_text_color.g,ui_normal_text_color.b,ui_normal_text_color.a
 #define HEADER_TEXT_COLOR NORMAL_TEXT_COLOR
 
 // Redraw everything on the screen.  Does not flip pages.
@@ -652,6 +657,17 @@ void ui_init_parameters(void)
                 &ui_menu_text_color.b,
                 &ui_menu_text_color.a);
         }
+		//ui_normal_text_color
+		if (!strncmp(str, "ui_normal_text_color", strlen("ui_normal_text_color"))) {
+			while (str[i++] != '=') {
+				;
+			}
+			sscanf(&str[i],"%d,%d,%d,%d",
+				&ui_normal_text_color.r,
+				&ui_normal_text_color.g,
+				&ui_normal_text_color.b,
+				&ui_normal_text_color.a);
+		}
     }
     fclose(f);
 }
