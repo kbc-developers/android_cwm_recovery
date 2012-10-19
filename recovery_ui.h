@@ -83,7 +83,7 @@ int restore_preinstall();
 #define ITEM_WIPE_DATA       3
 #define ITEM_WIPE_CACHE      4
 // unused in cwr
-#define ITEM_APPLY_CACHE     5
+#define ITEM_APPLY_CACHE     4
 #define ITEM_NANDROID        5
 #define ITEM_PARTITION       6
 #define ITEM_ADVANCED        7
@@ -95,7 +95,7 @@ int restore_preinstall();
 #define ITEM_WIPE_DATA       2
 #define ITEM_WIPE_CACHE      3
 // unused in cwr
-#define ITEM_APPLY_CACHE     4
+#define ITEM_APPLY_CACHE     3
 #define ITEM_NANDROID        4
 #define ITEM_PARTITION       5
 #define ITEM_ADVANCED        6

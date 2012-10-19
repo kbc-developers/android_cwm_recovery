@@ -88,7 +88,23 @@ Value* MountFn(const char* name, State* state, int argc, Expr* argv[]) {
         goto done;
     }
 
+#ifdef HAVE_SELINUX
+    char *secontext = NULL;
+
+    if (sehandle) {
+        selabel_lookup(sehandle, &secontext, mount_point, 0755);
+        setfscreatecon(secontext);
+    }
+#endif
+
     mkdir(mount_point, 0755);
+
+#ifdef HAVE_SELINUX
+    if (secontext) {
+        freecon(secontext);
+        setfscreatecon(NULL);
+    }
+#endif
 
 #ifdef RECOVERY_MULTI_BOOT
     if (multi_mount(location, mount_point, fs_type, NULL) == 0) {
@@ -388,7 +404,7 @@ Value* PackageExtractDirFn(const char* name, State* state,
 
     bool success = mzExtractRecursive(za, zip_path, dest_path,
                                       MZ_EXTRACT_FILES_ONLY, &timestamp,
-                                      NULL, NULL);
+                                      NULL, NULL, sehandle);
     free(zip_path);
     free(dest_path);
     return StringValue(strdup(success ? "t" : ""));
@@ -613,21 +629,27 @@ Value* SymlinkFn(const char* name, State* state, int argc, Expr* argv[]) {
         return NULL;
     }
 
+    int bad = 0;
     int i;
     for (i = 0; i < argc-1; ++i) {
         if (unlink(srcs[i]) < 0) {
             if (errno != ENOENT) {
                 fprintf(stderr, "%s: failed to remove %s: %s\n",
                         name, srcs[i], strerror(errno));
+                ++bad;
             }
         }
         if (symlink(target, srcs[i]) < 0) {
             fprintf(stderr, "%s: failed to symlink %s to %s: %s\n",
                     name, srcs[i], target, strerror(errno));
+            ++bad;
         }
         free(srcs[i]);
     }
     free(srcs);
+    if (bad) {
+        return ErrorAbort(state, "%s: some symlinks failed", name);
+    }
     return StringValue(strdup(""));
 }
 
@@ -646,6 +668,7 @@ Value* SetPermFn(const char* name, State* state, int argc, Expr* argv[]) {
 
     char* end;
     int i;
+    int bad = 0;
 
     int uid = strtoul(args[0], &end, 0);
     if (*end != '\0' || args[0][0] == 0) {
@@ -687,10 +710,12 @@ Value* SetPermFn(const char* name, State* state, int argc, Expr* argv[]) {
             if (chown(args[i], uid, gid) < 0) {
                 fprintf(stderr, "%s: chown of %s to %d %d failed: %s\n",
                         name, args[i], uid, gid, strerror(errno));
+                ++bad;
             }
             if (chmod(args[i], mode) < 0) {
                 fprintf(stderr, "%s: chmod of %s to %o failed: %s\n",
                         name, args[i], mode, strerror(errno));
+                ++bad;
             }
         }
     }
@@ -702,6 +727,10 @@ done:
     }
     free(args);
 
+    if (bad) {
+        free(result);
+        return ErrorAbort(state, "%s: some changes failed", name);
+    }
     return StringValue(result);
 }
 
@@ -1029,6 +1058,14 @@ Value* UIPrintFn(const char* name, State* state, int argc, Expr* argv[]) {
     return StringValue(buffer);
 }
 
+Value* WipeCacheFn(const char* name, State* state, int argc, Expr* argv[]) {
+    if (argc != 0) {
+        return ErrorAbort(state, "%s() expects no args, got %d", name, argc);
+    }
+    fprintf(((UpdaterInfo*)(state->cookie))->cmd_pipe, "wipe_cache\n");
+    return StringValue(strdup("t"));
+}
+
 Value* RunProgramFn(const char* name, State* state, int argc, Expr* argv[]) {
     if (argc < 1) {
         return ErrorAbort(state, "%s() expects at least 1 arg", name);
@@ -1221,6 +1258,8 @@ void RegisterInstallFunctions() {
 
     RegisterFunction("read_file", ReadFileFn);
     RegisterFunction("sha1_check", Sha1CheckFn);
+
+    RegisterFunction("wipe_cache", WipeCacheFn);
 
     RegisterFunction("ui_print", UIPrintFn);
 

@@ -45,6 +45,8 @@
 #include "flashutils/flashutils.h"
 #include "dedupe/dedupe.h"
 
+struct selabel_handle *sehandle = NULL;
+
 static const struct option OPTIONS[] = {
   { "send_intent", required_argument, NULL, 's' },
   { "update_package", required_argument, NULL, 'u' },
@@ -147,7 +149,7 @@ fopen_path(const char *path, const char *mode) {
 
     // When writing, try to create the containing directory, if necessary.
     // Use generous permissions, the system (init.rc) will reset them.
-    if (strchr("wa", mode[0])) dirCreateHierarchy(path, 0777, NULL, 1);
+    if (strchr("wa", mode[0])) dirCreateHierarchy(path, 0777, NULL, 1, sehandle);
 
     FILE *fp = fopen(path, mode);
     if (fp == NULL && path != COMMAND_FILE) LOGE("Can't open %s\n", path);
@@ -829,7 +831,7 @@ prompt_and_wait() {
             case ITEM_ADVANCED:
                 show_advanced_menu();
                 break;
-                
+
             case ITEM_POWEROFF:
                 poweroff = 1;
                 return;

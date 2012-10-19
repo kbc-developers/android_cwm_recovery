@@ -116,7 +116,7 @@ try_update_binary(const char *path, ZipArchive *zip) {
         binary = UPDATER_BIN_PATH;
     } else {
         const ZipEntry* binary_entry =
-        mzFindZipEntry(zip, ASSUMED_UPDATE_BINARY_NAME);
+                mzFindZipEntry(zip, ASSUMED_UPDATE_BINARY_NAME);
         if (binary_entry == NULL) {
             const ZipEntry* update_script_entry =
                     mzFindZipEntry(zip, ASSUMED_UPDATE_SCRIPT_NAME);

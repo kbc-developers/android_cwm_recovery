@@ -31,9 +31,6 @@
 #include "roots.h"
 #include "recovery_ui.h"
 
-#include "../../external/yaffs2/yaffs2/utils/mkyaffs2image.h"
-#include "../../external/yaffs2/yaffs2/utils/unyaffs.h"
-
 #include "extendedcommands.h"
 #include "nandroid.h"
 #include "mounts.h"
@@ -134,13 +131,6 @@ int install_zip(const char* packagefilepath)
     return 0;
 }
 
-char* INSTALL_MENU_ITEMS[] = {  "choose zip from internal sdcard",
-                                "apply /sdcard/update.zip",
-                                "toggle signature verification",
-                                "toggle kernel flash",
-                                "toggle updater binary",
-                                "choose zip from external sdcard",
-                                NULL };
 #define ITEM_CHOOSE_ZIP_INT   (0)
 #define ITEM_APPLY_SDCARD     (1)
 #define ITEM_SIG_CHECK        (2)
@@ -158,12 +148,27 @@ void show_install_update_menu()
                                 NULL
     };
     
-    if (volume_for_path("/emmc") == NULL)
-        INSTALL_MENU_ITEMS[ITEM_CHOOSE_ZIP_EXT] = NULL;
+    char* install_menu_items[] = {  "choose zip from internal sdcard",
+                                    "apply /sdcard/update.zip",
+                                    "toggle signature verification",
+                                    "toggle kernel flash",
+                                    "toggle updater binary",
+                                    NULL,
+                                    NULL };
+
+    char *other_sd = NULL;
+    if (volume_for_path("/emmc") != NULL) {
+        other_sd = "/emmc/";
+        install_menu_items[ITEM_CHOOSE_ZIP_EXT] = "choose zip from external sdcard";
+    }
+    else if (volume_for_path("/external_sd") != NULL) {
+        other_sd = "/external_sd/";
+        install_menu_items[ITEM_CHOOSE_ZIP_EXT] = "choose zip from external sdcard";
+    }
     
     for (;;)
     {
-        int chosen_item = get_menu_selection(headers, INSTALL_MENU_ITEMS, 0, 0);
+        int chosen_item = get_menu_selection(headers, install_menu_items, 0, 0);
         switch (chosen_item)
         {
             case ITEM_SIG_CHECK:
@@ -185,7 +190,7 @@ void show_install_update_menu()
                 show_choose_zip_menu("/sdcard/");
                 break;
             case ITEM_CHOOSE_ZIP_EXT:
-                show_choose_zip_menu("/emmc/");
+                show_choose_zip_menu(other_sd);
                 break;
             default:
                 return;
@@ -645,6 +650,7 @@ int confirm_selection(const char* title, const char* confirm)
 #define TUNE2FS_BIN     "/sbin/tune2fs"
 #define E2FSCK_BIN      "/sbin/e2fsck"
 
+extern struct selabel_handle *sehandle;
 int format_device(const char *device, const char *path, const char *fs_type) {
     Volume* v = volume_for_path(path);
     if (v == NULL) {

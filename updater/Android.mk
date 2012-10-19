@@ -3,8 +3,8 @@
 LOCAL_PATH := $(call my-dir)
 
 updater_src_files := \
-	install.c \
 	../mounts.c \
+	install.c \
 	updater.c \
 	../recovery_multi.c
 
@@ -33,6 +33,13 @@ LOCAL_CFLAGS += -DUSE_EXT4
 LOCAL_C_INCLUDES += system/extras/ext4_utils
 LOCAL_STATIC_LIBRARIES += libext4_utils libz
 endif
+
+ifeq ($(HAVE_SELINUX), true)
+LOCAL_C_INCLUDES += external/libselinux/include
+LOCAL_STATIC_LIBRARIES += libselinux
+LOCAL_CFLAGS += -DHAVE_SELINUX
+endif # HAVE_SELINUX
+
 ifeq ($(RECOVERY_MULTI_BOOT), true)
 LOCAL_CFLAGS += -DRECOVERY_MULTI_BOOT
 endif
