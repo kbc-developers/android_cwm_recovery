@@ -15,6 +15,9 @@ ifeq ($(TARGET_PRODUCT), cm_d2dcm)
 else ifeq ($(TARGET_PRODUCT), cm_galaxys2)
   LOCAL_SRC_FILES += graphics.c
   LOCAL_CFLAGS += -DRECOVERY_BGRA
+else ifeq ($(TARGET_PRODUCT), cm_quincydcm)
+  LOCAL_SRC_FILES += graphics.c
+  LOCAL_CFLAGS += -DRECOVERY_RGBX
 else ifeq ($(TARGET_PRODUCT), cm_urushi)
   LOCAL_SRC_FILES += graphics_urushi.c
   LOCAL_CFLAGS += -DRECOVERY_RGB565

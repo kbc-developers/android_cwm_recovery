@@ -925,7 +925,10 @@ main(int argc, char **argv) {
             return getprop_main(argc, argv);
         return busybox_driver(argc, argv);
     }
-    //__system("/sbin/postrecoveryboot.sh");
+
+#if defined(TARGET_DEVICE_SC05D)
+    __system("/sbin/postrecoveryboot.sh");
+#endif
 
     int is_user_initiated_recovery = 0;
 #ifdef RECOVERY_TZ_JPN
