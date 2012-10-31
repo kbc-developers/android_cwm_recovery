@@ -730,7 +730,7 @@ done:
     if (bad) {
         //free(result);
         //return ErrorAbort(state, "%s: some changes failed", name);
-	fprintf(stderr, "warning: %s: some changes failed", name);
+        fprintf(stderr, "warning: %s: some changes failed", name);
     }
     return StringValue(result);
 }
