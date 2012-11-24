@@ -26,6 +26,8 @@ else ifeq ($(TARGET_PRODUCT), cm_galaxys2)
 LOCAL_CFLAGS += -DTARGET_DEVICE_SC02C
 else ifeq ($(TARGET_PRODUCT), cm_quincydcm)
 LOCAL_CFLAGS += -DTARGET_DEVICE_SC05D
+else ifeq ($(TARGET_PRODUCT), cm_celoxdcm)
+LOCAL_CFLAGS += -DTARGET_DEVICE_SC03D
 else ifeq ($(TARGET_PRODUCT), cm_urushi)
 LOCAL_CFLAGS += -DTARGET_DEVICE_SO03C
 endif

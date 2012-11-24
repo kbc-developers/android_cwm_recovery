@@ -9,7 +9,7 @@ int device_toggle_display(volatile char* key_pressed, int key_code) {
 #ifdef TARGET_DEVICE_SC06D
     return ( (get_allow_toggle_display()) && (key_code == KEY_POWER) );
 #endif
-#if defined(TARGET_DEVICE_SC02C) || defined(TARGET_DEVICE_SC05D)
+#if defined(TARGET_DEVICE_SC02C) || defined(TARGET_DEVICE_SC05D) || defined(TARGET_DEVICE_SC03D)
     return ( (get_allow_toggle_display()) && (key_code == KEY_POWER) );
 #endif
 #ifdef TARGET_DEVICE_SO03C
@@ -33,7 +33,7 @@ int device_handle_key(int key_code, int visible) {
                     return GO_BACK;
                 }
 #endif
-#if defined(TARGET_DEVICE_SC02C) || defined(TARGET_DEVICE_SC05D)
+#if defined(TARGET_DEVICE_SC02C) || defined(TARGET_DEVICE_SC05D) || defined(TARGET_DEVICE_SC03D)
             case KEY_VOLUMEDOWN:
                 return HIGHLIGHT_DOWN;
             case KEY_VOLUMEUP:

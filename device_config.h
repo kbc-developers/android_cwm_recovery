@@ -121,6 +121,41 @@
 #endif
 // --------------------------------------------------------
 
+// SC03D --------------------------------------------------
+#ifdef TARGET_DEVICE_SC03D
+// ums
+#define BOARD_UMS_LUNFILE     "/sys/devices/virtual/android_usb/android0/f_mass_storage/lun/file"
+#define BOARD_UMS_LUNFILE0    "/sys/devices/virtual/android_usb/android0/f_mass_storage/lun0/file"
+#define BOARD_UMS_LUNFILE1    "/sys/devices/virtual/android_usb/android0/f_mass_storage/lun1/file"
+
+// mmcblk
+#define MMCBLK_EFS            "mmcblk0p21"
+#define MMCBLK_BOOT           "mmcblk0p8"
+#define MMCBLK_SYSTEM         "mmcblk0p24"
+#define MMCBLK_DATA           "mmcblk0p25"
+#define MMCBLK_SDCARD         "mmcblk0p29"
+
+// path
+#define UPDATER_BIN_PATH      "/sbin/updater"
+
+// key
+#define DEVICE_KEY_HOME       KEY_HOME
+
+// gesture
+#define GESTURE_UD_SWIPE_THRED       (80)
+#define GESTURE_BACK_SWIPE_THRED     (200)
+#define GESTURE_TOUCH_THRED          (3)
+
+// strings
+#define DEVICE_NAME "SC03D"
+#define REBOOT_BOOTLOADER_CMD "download"
+
+// option
+#define BOARD_HAS_SDCARD_EXTERNAL
+
+#endif
+// --------------------------------------------------------
+
 // SO03C --------------------------------------------------
 #ifdef TARGET_DEVICE_SO03C
 // ums

@@ -926,7 +926,7 @@ main(int argc, char **argv) {
         return busybox_driver(argc, argv);
     }
 
-#if defined(TARGET_DEVICE_SC05D)
+#if defined(TARGET_DEVICE_SC05D) || defined(TARGET_DEVICE_SC03D)
     __system("/sbin/postrecoveryboot.sh");
 #endif
 
