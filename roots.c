@@ -254,9 +254,16 @@ void setup_data_media() {
     for (i = 0; i < num_volumes; i++) {
         Volume* vol = device_volumes + i;
         if (strcmp(vol->fs_type, "datamedia") == 0) {
-            rmdir(vol->mount_point);
-            mkdir("/data/media", 0755);
-            symlink("/data/media", vol->mount_point);
+            ensure_path_mounted("/data");
+            if (access("/data/media/0", R_OK) == 0) {
+                rmdir(vol->mount_point);
+                chmod("/data/media/0", 0755);
+                symlink("/data/media/0", vol->mount_point);
+            } else {
+                rmdir(vol->mount_point);
+                mkdir("/data/media", 0755);
+                symlink("/data/media", vol->mount_point);
+            }
             return;
         }
     }
