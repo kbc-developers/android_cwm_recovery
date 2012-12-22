@@ -31,6 +31,8 @@
 #include "flashutils/flashutils.h"
 #include "extendedcommands.h"
 
+int sdcard_path_after_jb_mr1 = 0;
+
 extern int multi_mount(
     const char* device, const char* mount_point, const char* fs_type, const char* fs_options);
 
@@ -256,10 +258,12 @@ void setup_data_media() {
         if (strcmp(vol->fs_type, "datamedia") == 0) {
             ensure_path_mounted("/data");
             if (access("/data/media/0", R_OK) == 0) {
+                sdcard_path_after_jb_mr1 = 1;
                 rmdir(vol->mount_point);
                 chmod("/data/media/0", 0755);
                 symlink("/data/media/0", vol->mount_point);
             } else {
+                sdcard_path_after_jb_mr1 = 0;
                 rmdir(vol->mount_point);
                 mkdir("/data/media", 0755);
                 symlink("/data/media", vol->mount_point);

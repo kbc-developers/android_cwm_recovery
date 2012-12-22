@@ -109,6 +109,7 @@ static void nandroid_callback(const char* filename)
         ui_delete_line();
 }
 
+extern int sdcard_path_after_jb_mr1;
 static void compute_directory_stats(const char* directory)
 {
     char tmp[PATH_MAX];
@@ -117,14 +118,18 @@ static void compute_directory_stats(const char* directory)
         char link_path[PATH_MAX] = { 0 };
         ssize_t len = readlink(directory, link_path, sizeof(link_path));
         if (len > 0)
-            sprintf(tmp, "find %s | %s wc -l > /tmp/dircount", link_path, is_data_media() ? "grep -v /data/media |" : "");
+            sprintf(tmp, "find %s | %s wc -l > /tmp/dircount", link_path, is_data_media() ?
+                (sdcard_path_after_jb_mr1 ? "grep -v /data/media/0 |" : "grep -v /data/media |") : "");
         else
-            sprintf(tmp, "find %s | %s wc -l > /tmp/dircount", directory, strcmp(directory, "/data") == 0 && is_data_media() ? "grep -v /data/media |" : "");
+            sprintf(tmp, "find %s | %s wc -l > /tmp/dircount", directory, strcmp(directory, "/data") == 0 && is_data_media() ?
+                (sdcard_path_after_jb_mr1 ? "grep -v /data/media/0 |" : "grep -v /data/media |") : "");
     } else {
-        sprintf(tmp, "find %s | %s wc -l > /tmp/dircount", directory, strcmp(directory, "/data") == 0 && is_data_media() ? "grep -v /data/media |" : "");
+        sprintf(tmp, "find %s | %s wc -l > /tmp/dircount", directory, strcmp(directory, "/data") == 0 && is_data_media() ?
+            (sdcard_path_after_jb_mr1 ? "grep -v /data/media/0 |" : "grep -v /data/media |") : "");
     }
 #else
-    sprintf(tmp, "find %s | %s wc -l > /tmp/dircount", directory, strcmp(directory, "/data") == 0 && is_data_media() ? "grep -v /data/media |" : "");
+    sprintf(tmp, "find %s | %s wc -l > /tmp/dircount", directory, strcmp(directory, "/data") == 0 && is_data_media() ?
+        (sdcard_path_after_jb_mr1 ? "grep -v /data/media/0 |" : "grep -v /data/media |") : "");
 #endif
     __system(tmp);
     char count_text[100];
