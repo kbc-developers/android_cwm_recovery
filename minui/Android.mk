@@ -24,7 +24,13 @@ else ifeq ($(TARGET_PRODUCT), cm_celoxdcm)
 else ifeq ($(TARGET_PRODUCT), cm_urushi)
   LOCAL_SRC_FILES += graphics_urushi.c
   LOCAL_CFLAGS += -DRECOVERY_RGB565
+#unknown product name yet.
+else ifeq ($(TARGET_PRODUCT), cm_galaxynote2)
+  LOCAL_SRC_FILES += graphics.c
+  LOCAL_CFLAGS += -DRECOVERY_RGBX
 endif
+
+
 
 ifneq ($(BOARD_USE_CUSTOM_RECOVERY_FONT),)
   LOCAL_CFLAGS += -DBOARD_USE_CUSTOM_RECOVERY_FONT=$(BOARD_USE_CUSTOM_RECOVERY_FONT)

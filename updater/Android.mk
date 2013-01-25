@@ -30,6 +30,8 @@ else ifeq ($(TARGET_PRODUCT), cm_celoxdcm)
 LOCAL_CFLAGS += -DTARGET_DEVICE_SC03D
 else ifeq ($(TARGET_PRODUCT), cm_urushi)
 LOCAL_CFLAGS += -DTARGET_DEVICE_SO03C
+else ifeq ($(TARGET_PRODUCT), cm_galaxynote2)
+LOCAL_CFLAGS += -DTARGET_DEVICE_SO02E
 endif
 
 ifeq ($(TARGET_USERIMAGES_USE_EXT4), true)
