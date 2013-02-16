@@ -17,6 +17,8 @@ LOCAL_SRC_FILES := \
     firmware.c \
     edifyscripting.c \
     setprop.c \
+    getprop.c \
+    dynarray.c \
     default_recovery_ui.c \
     adb_install.c \
     verifier.c
@@ -28,16 +30,33 @@ LOCAL_MODULE := recovery
 
 LOCAL_FORCE_STATIC_EXECUTABLE := true
 
-ifdef I_AM_KOUSH
-RECOVERY_NAME := ClockworkMod Recovery
-LOCAL_CFLAGS += -DI_AM_KOUSH
-else
-ifndef RECOVERY_NAME
-RECOVERY_NAME := CWM-based Recovery
-endif
+ifeq ($(TARGET_PRODUCT), cm_d2dcm)
+RECOVERY_NAME := CWM-based Galaxy S3 Recovery
+LOCAL_CFLAGS += -DTARGET_DEVICE_SC06D
+
+else ifeq ($(TARGET_PRODUCT), cm_galaxys2)
+RECOVERY_NAME := CWM-based Galaxy S2 Recovery
+LOCAL_CFLAGS += -DTARGET_DEVICE_SC02C
+
+else ifeq ($(TARGET_PRODUCT), cm_quincydcm)
+RECOVERY_NAME := CWM-based Galaxy Note Recovery
+LOCAL_CFLAGS += -DTARGET_DEVICE_SC05D
+
+else ifeq ($(TARGET_PRODUCT), cm_celoxdcm)
+RECOVERY_NAME := CWM-based Galaxy S2 LTE Recovery
+LOCAL_CFLAGS += -DTARGET_DEVICE_SC03D
+
+else ifeq ($(TARGET_PRODUCT), cm_urushi)
+RECOVERY_NAME := CWM-based Xperia Ray Recovery
+LOCAL_CFLAGS += -DTARGET_DEVICE_SO03C
+
+else ifeq ($(TARGET_PRODUCT), cm_valentewx)
+RECOVERY_NAME := CWM-based HTC J Recovery
+LOCAL_CFLAGS += -DTARGET_DEVICE_ISW13HT
+
 endif
 
-RECOVERY_VERSION := $(RECOVERY_NAME) v6.0.2.8
+RECOVERY_VERSION := $(RECOVERY_NAME) v6.0.2.8_r0
 
 LOCAL_CFLAGS += -DRECOVERY_VERSION="$(RECOVERY_VERSION)"
 RECOVERY_API_VERSION := 2
