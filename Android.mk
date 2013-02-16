@@ -21,7 +21,8 @@ LOCAL_SRC_FILES := \
     dynarray.c \
     default_recovery_ui.c \
     adb_install.c \
-    verifier.c
+    verifier.c \
+    default_recovery_keys.c
 
 ADDITIONAL_RECOVERY_FILES := $(shell echo $$ADDITIONAL_RECOVERY_FILES)
 LOCAL_SRC_FILES += $(ADDITIONAL_RECOVERY_FILES)
@@ -97,12 +98,6 @@ LOCAL_STATIC_LIBRARIES += libext4_utils_static libz libsparse_static
 # TODO: Build the ramdisk image in a more principled way.
 
 LOCAL_MODULE_TAGS := eng
-
-ifeq ($(BOARD_CUSTOM_RECOVERY_KEYMAPPING),)
-  LOCAL_SRC_FILES += default_recovery_keys.c
-else
-  LOCAL_SRC_FILES += $(BOARD_CUSTOM_RECOVERY_KEYMAPPING)
-endif
 
 LOCAL_STATIC_LIBRARIES += libext4_utils_static libz libsparse_static
 LOCAL_STATIC_LIBRARIES += libminzip libunz libmincrypt
