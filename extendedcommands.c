@@ -520,6 +520,12 @@ int control_usb_storage_for_lun(Volume* vol, bool enable) {
 #ifdef BOARD_UMS_LUNFILE
         BOARD_UMS_LUNFILE,
 #endif
+#ifdef BOARD_UMS_LUNFILE0
+        BOARD_UMS_LUNFILE0,
+#endif
+#ifdef BOARD_UMS_LUNFILE1
+        BOARD_UMS_LUNFILE1,
+#endif
 #ifdef TARGET_USE_CUSTOM_LUN_FILE_PATH
         STRINGIFY(TARGET_USE_CUSTOM_LUN_FILE_PATH),
 #endif
@@ -1453,6 +1459,7 @@ void create_fstab()
     write_fstab_root("/emmc", file);
     write_fstab_root("/system", file);
     write_fstab_root("/sdcard", file);
+    write_fstab_root("/external_sd", file);
 #ifdef RECOVERY_HAVE_SD_EXT
     write_fstab_root("/sd-ext", file);
 #endif
