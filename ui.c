@@ -402,6 +402,17 @@ static void *progress_thread(void *cookie)
 
 static int rel_sum = 0;
 
+#ifdef RECOVERY_TOUCH_GESTURE
+#define GESTURE_NULL_POS             (-1000)
+static int s_first_touch = 1;
+static int s_cur_slot = 0;
+static int s_tracking_id = -1;
+static int s_first_y = GESTURE_NULL_POS;
+static int s_last_y = GESTURE_NULL_POS;
+static int s_first_x = GESTURE_NULL_POS;
+static int s_last_x = GESTURE_NULL_POS;
+#endif
+
 static int input_callback(int fd, short revents, void *data)
 {
     struct input_event ev;
@@ -418,6 +429,9 @@ static int input_callback(int fd, short revents, void *data)
 #endif
 
     if (ev.type == EV_SYN) {
+#ifdef RECOVERY_TOUCH_GESTURE
+        s_cur_slot = 0;
+#endif
         return 0;
     } else if (ev.type == EV_REL) {
         if (ev.code == REL_Y) {
@@ -440,6 +454,114 @@ static int input_callback(int fd, short revents, void *data)
                 rel_sum = 0;
             }
         }
+#ifdef RECOVERY_TOUCH_GESTURE
+    } else if (ev.type == EV_ABS) {
+        if (ev.code == ABS_MT_SLOT) {
+            s_cur_slot = ev.value;
+            return 0;
+        }
+        if (s_cur_slot != 0) {
+            // use slot0 only
+            return 0;
+        }
+
+#if 0 // for debug
+        switch (ev.code) {
+        case ABS_MT_TRACKING_ID:
+            LOGE("ev code=ABS_MT_TRACKING_ID value=%d\n", ev.value);
+            break;
+        case ABS_MT_ORIENTATION:
+            LOGE("ev code=ABS_MT_ORIENTATION value=%d\n", ev.value);
+            break;
+        case ABS_MT_POSITION_X:
+            LOGE("ev code=ABS_MT_POSITION_X value=%d\n", ev.value);
+            break;
+        case ABS_MT_POSITION_Y:
+            LOGE("ev code=ABS_MT_POSITION_Y value=%d\n", ev.value);
+            break;
+        case ABS_MT_TOUCH_MAJOR:
+            LOGE("ev code=ABS_MT_TOUCH_MAJOR value=%d\n", ev.value);
+            break;
+        case ABS_MT_TOUCH_MINOR:
+            LOGE("ev code=ABS_MT_TOUCH_MINOR value=%d\n", ev.value);
+            break;
+        case ABS_MT_BLOB_ID:
+            LOGE("ev code=ABS_MT_BLOB_ID value=%d\n", ev.value);
+            break;
+        case ABS_MT_TOOL_TYPE:
+            LOGE("ev code=ABS_MT_TOOL_TYPE value=%d\n", ev.value);
+            break;
+        case ABS_MT_PRESSURE:
+            LOGE("ev code=ABS_MT_PRESSURE value=%d\n", ev.value);
+            break;
+        }
+#endif
+
+        if (ev.code == ABS_MT_TRACKING_ID) {
+            s_tracking_id = ev.value;
+            if (s_tracking_id == -1) {
+                if ((abs(s_last_y - s_first_y) <= GESTURE_TOUCH_THRED)
+                &&  (abs(s_last_x - s_first_x) <= GESTURE_TOUCH_THRED)) {
+                    s_first_y = s_last_y = GESTURE_NULL_POS;
+                    s_first_x = s_last_x = GESTURE_NULL_POS;
+                    if (s_first_touch != 0) {
+                        return 0;
+                    }
+                    fake_key = 1;
+                    ev.type = EV_KEY;
+                    ev.code = DEVICE_KEY_HOME;
+                    ev.value = 1;
+                    rel_sum = 0;
+                } else if (s_last_x - s_first_x > GESTURE_BACK_SWIPE_THRED) {
+                    s_first_y = s_last_y = GESTURE_NULL_POS;
+                    s_first_x = s_last_x = GESTURE_NULL_POS;
+                    fake_key = 1;
+                    ev.type = EV_KEY;
+                    ev.code = KEY_BACK;
+                    ev.value = 1;
+                    rel_sum = 0;
+                } else {
+                    s_first_y = s_last_y = GESTURE_NULL_POS;
+                    s_first_x = s_last_x = GESTURE_NULL_POS;
+                    return 0;
+                }
+            }
+        } else if (ev.code == ABS_MT_POSITION_Y) {
+            if (s_tracking_id != -1) {
+                if (s_last_y == GESTURE_NULL_POS) {
+                    s_first_y = s_last_y = ev.value;
+                } else {
+                    int val = ev.value - s_last_y;
+                    int abs_val = abs(val);
+                    if (abs_val > GESTURE_UD_SWIPE_THRED) {
+                        s_last_y = ev.value;
+                        s_first_touch = 0;
+                        if (val > 0) {
+                            fake_key = 1;
+                            ev.type = EV_KEY;
+                            ev.code = KEY_VOLUMEDOWN;
+                            ev.value = 1;
+                            rel_sum = 0;
+                        } else {
+                            fake_key = 1;
+                            ev.type = EV_KEY;
+                            ev.code = KEY_VOLUMEUP;
+                            ev.value = 1;
+                            rel_sum = 0;
+                        }
+                    }
+                }
+            }
+        } else if (ev.code == ABS_MT_POSITION_X) {
+            if (s_tracking_id != -1) {
+                if (s_last_x == GESTURE_NULL_POS) {
+                    s_first_x = s_last_x = ev.value;
+                } else {
+                    s_last_x = ev.value;
+                }
+            }
+        }
+#endif
     } else {
         rel_sum = 0;
     }
