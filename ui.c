@@ -232,9 +232,27 @@ static void draw_text_line(int row, const char* t) {
   }
 }
 
-//#define MENU_TEXT_COLOR 255, 160, 49, 255
-#define MENU_TEXT_COLOR 0, 191, 255, 255
-#define NORMAL_TEXT_COLOR 200, 200, 200, 255
+typedef struct {
+    unsigned char r;
+    unsigned char g;
+    unsigned char b;
+    unsigned char a;
+} UITextColor;
+
+UITextColor ui_menu_text_color = {
+#ifdef RECOVERY_MULTI_BOOT
+    219, 168, 0, 255,
+#else
+    0, 191, 255, 255,
+#endif
+};
+UITextColor ui_normal_text_color =
+{
+	200, 200, 200, 255
+};
+
+#define MENU_TEXT_COLOR ui_menu_text_color.r,ui_menu_text_color.g,ui_menu_text_color.b,ui_menu_text_color.a
+#define NORMAL_TEXT_COLOR ui_normal_text_color.r,ui_normal_text_color.g,ui_normal_text_color.b,ui_normal_text_color.a
 #define HEADER_TEXT_COLOR NORMAL_TEXT_COLOR
 
 // Redraw everything on the screen.  Does not flip pages.
@@ -481,6 +499,78 @@ static void *input_thread(void *cookie)
     return NULL;
 }
 
+#define UI_PARAMETER_FILE "/res/ui_parameters"
+#define STR_MAX 256
+void ui_init_parameters(void)
+{
+    FILE* f = fopen(UI_PARAMETER_FILE, "rt");
+    if (f == NULL) {
+        return;
+    }
+
+    for(;;) {
+        int ret, i;
+        char str[STR_MAX];
+
+        if (fgets(str, STR_MAX, f) == NULL) {
+            break; // eof
+        }
+        if(str[0] == '#') {
+            continue; //skip comment line
+        }
+
+        i = 0;
+        if (!strncmp(str, "ui_parameters", strlen("ui_parameters"))) {
+            int indeterminate_frames, update_fps, installing_frames, install_overlay_offset_x, install_overlay_offset_y;
+            while (str[i++] != '=');
+            ret = sscanf(&str[i],"%d,%d,%d,%d,%d",
+                &indeterminate_frames,
+                &update_fps,
+                &installing_frames,
+                &install_overlay_offset_x,
+                &install_overlay_offset_y);
+            if (ret == 5) {
+                ui_parameters.indeterminate_frames = indeterminate_frames;
+                ui_parameters.update_fps = update_fps;
+                ui_parameters.installing_frames = installing_frames;
+                ui_parameters.install_overlay_offset_x = install_overlay_offset_x;
+                ui_parameters.install_overlay_offset_y = install_overlay_offset_y;
+            } else {
+                LOGE("Invalid ui_parameters param ret=%d", ret);
+            }
+        }
+
+        if (!strncmp(str, "ui_menu_text_color", strlen("ui_menu_text_color"))) {
+            int r, g, b, a;
+            while (str[i++] != '=');
+            ret = sscanf(&str[i],"%d,%d,%d,%d", &r, &g, &b, &a);
+            if (ret == 4) {
+                ui_menu_text_color.r = (unsigned char)r;
+                ui_menu_text_color.g = (unsigned char)g;
+                ui_menu_text_color.b = (unsigned char)b;
+                ui_menu_text_color.a = (unsigned char)a;
+            } else {
+                LOGE("Invalid ui_menu_text_color param ret=%d", ret);
+            }
+        }
+
+		if (!strncmp(str, "ui_normal_text_color", strlen("ui_normal_text_color"))) {
+           int r, g, b, a;
+			while (str[i++] != '=');
+            ret = sscanf(&str[i],"%d,%d,%d,%d", &r, &g, &b, &a);
+            if (ret == 4) {
+                ui_normal_text_color.r = (unsigned char)r;
+                ui_normal_text_color.g = (unsigned char)g;
+                ui_normal_text_color.b = (unsigned char)b;
+                ui_normal_text_color.a = (unsigned char)a;
+            } else {
+                LOGE("Invalid ui_normal_text_color param ret=%d", ret);
+            }
+		}
+    }
+    fclose(f);
+}
+
 void ui_init(void)
 {
     ui_has_initialized = 1;
@@ -489,6 +579,7 @@ void ui_init(void)
 #ifdef BOARD_TOUCH_RECOVERY
     touch_init();
 #endif
+    ui_init_parameters();
 
     text_col = text_row = 0;
     text_rows = gr_fb_height() / CHAR_HEIGHT;
