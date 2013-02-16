@@ -138,6 +138,12 @@ static double now() {
     return tv.tv_sec + tv.tv_usec / 1000000.0;
 }
 
+static long getCurrentMs() {
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return tv.tv_sec * 1000 + tv.tv_usec / 1000;
+}
+
 // Draw the given frame over the installation overlay animation.  The
 // background is not cleared or draw with the base icon first; we
 // assume that the frame already contains some other frame of the
@@ -411,6 +417,7 @@ static int s_first_y = GESTURE_NULL_POS;
 static int s_last_y = GESTURE_NULL_POS;
 static int s_first_x = GESTURE_NULL_POS;
 static int s_last_x = GESTURE_NULL_POS;
+static long s_last_fake_event_ms = 0;
 #endif
 
 static int input_callback(int fd, short revents, void *data)
@@ -507,11 +514,15 @@ static int input_callback(int fd, short revents, void *data)
                     if (s_first_touch != 0) {
                         return 0;
                     }
+                    if ((s_last_fake_event_ms + 300) > getCurrentMs()) {
+                        return 0;
+                    }
                     fake_key = 1;
                     ev.type = EV_KEY;
                     ev.code = DEVICE_KEY_HOME;
                     ev.value = 1;
                     rel_sum = 0;
+                    s_last_fake_event_ms = getCurrentMs();
                 } else if (s_last_x - s_first_x > GESTURE_BACK_SWIPE_THRED) {
                     s_first_y = s_last_y = GESTURE_NULL_POS;
                     s_first_x = s_last_x = GESTURE_NULL_POS;
@@ -520,6 +531,7 @@ static int input_callback(int fd, short revents, void *data)
                     ev.code = KEY_BACK;
                     ev.value = 1;
                     rel_sum = 0;
+                    s_last_fake_event_ms = getCurrentMs();
                 } else {
                     s_first_y = s_last_y = GESTURE_NULL_POS;
                     s_first_x = s_last_x = GESTURE_NULL_POS;
@@ -549,6 +561,7 @@ static int input_callback(int fd, short revents, void *data)
                             ev.value = 1;
                             rel_sum = 0;
                         }
+                        s_last_fake_event_ms = getCurrentMs();
                     }
                 }
             }
