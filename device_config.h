@@ -221,4 +221,37 @@
 #endif
 // --------------------------------------------------------
 
+// SC02E --------------------------------------------------
+#ifdef TARGET_DEVICE_SC02E
+// ums
+#define BOARD_UMS_LUNFILE     "/sys/devices/virtual/android_usb/android0/f_mass_storage/lun/file"
+#define BOARD_UMS_LUNFILE0    "/sys/devices/virtual/android_usb/android0/f_mass_storage/lun0/file"
+#define BOARD_UMS_LUNFILE1    "/sys/devices/virtual/android_usb/android0/f_mass_storage/lun1/file"
+
+// mmcblk
+#define MMCBLK_BOOT           "mmcblk0p8"
+#define MMCBLK_SYSTEM         "mmcblk0p13"
+#define MMCBLK_DATA           "mmcblk0p16"
+
+// path
+#define UPDATER_BIN_PATH      "/sbin/updater"
+
+// key
+#define DEVICE_KEY_HOME       KEY_HOME
+
+// gesture
+#define GESTURE_UD_SWIPE_THRED       (80)
+#define GESTURE_BACK_SWIPE_THRED     (200)
+#define GESTURE_TOUCH_THRED          (3)
+
+// strings
+#define DEVICE_NAME "SC06D"
+#define REBOOT_BOOTLOADER_CMD "download"
+
+// option
+#define BOARD_HAS_SDCARD_EXTERNAL
+
+#endif
+// --------------------------------------------------------
+
 #endif /* __RECOVERY_DEVICE_CONFIG_H__ */

@@ -55,6 +55,10 @@ else ifeq ($(TARGET_PRODUCT), cm_valentewx)
 RECOVERY_NAME := CWM-based HTC J Recovery
 LOCAL_CFLAGS += -DTARGET_DEVICE_ISW13HT
 
+else ifeq ($(TARGET_PRODUCT), cm_galaxynote2)
+RECOVERY_NAME := CWM-based Galaxy Note2 Recovery
+LOCAL_CFLAGS += -DTARGET_DEVICE_SC02E
+
 endif
 
 RECOVERY_VERSION := $(RECOVERY_NAME) v6.0.2.8_r0
