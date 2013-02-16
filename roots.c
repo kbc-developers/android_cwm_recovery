@@ -31,6 +31,8 @@
 #include "flashutils/flashutils.h"
 #include "extendedcommands.h"
 
+int sdcard_path_after_jb_mr1 = 0;
+
 int num_volumes;
 Volume* device_volumes;
 
@@ -214,9 +216,18 @@ void setup_data_media() {
     for (i = 0; i < num_volumes; i++) {
         Volume* vol = device_volumes + i;
         if (strcmp(vol->fs_type, "datamedia") == 0) {
-            rmdir(vol->mount_point);
-            mkdir("/data/media", 0755);
-            symlink("/data/media", vol->mount_point);
+            ensure_path_mounted("/data");
+            if (access("/data/media/0", R_OK) == 0) {
+                sdcard_path_after_jb_mr1 = 1;
+                rmdir(vol->mount_point);
+                chmod("/data/media/0", 0755);
+                symlink("/data/media/0", vol->mount_point);
+            } else {
+                sdcard_path_after_jb_mr1 = 0;
+                rmdir(vol->mount_point);
+                mkdir("/data/media", 0755);
+                symlink("/data/media", vol->mount_point);
+            }
             return;
         }
     }
@@ -297,7 +308,11 @@ int ensure_path_mounted_at_mount_point(const char* path, const char* mount_point
         // let's try mounting with the mount binary and hope for the best.
         char mount_cmd[PATH_MAX];
         sprintf(mount_cmd, "mount %s", path);
-        return __system(mount_cmd);
+        int ret = __system(mount_cmd);
+        if (ret) {
+            LOGE("__system(%s) ret=%d\n", mount_cmd, ret);
+        }
+        return ret;
     }
 
     LOGE("unknown fs_type \"%s\" for %s\n", v->fs_type, mount_point);

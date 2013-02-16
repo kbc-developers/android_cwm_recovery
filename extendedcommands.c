@@ -46,6 +46,9 @@ int signature_check_enabled = 1;
 int script_assert_enabled = 1;
 static const char *SDCARD_UPDATE_FILE = "/sdcard/update.zip";
 
+int script_kernel_flash = 1;
+int script_updater_binary = 0;
+
 int
 get_filtered_menu_selection(char** headers, char** items, int menu_only, int initial_selection, int items_count) {
     int index;
@@ -91,6 +94,18 @@ toggle_signature_check()
     ui_print("Signature Check: %s\n", signature_check_enabled ? "Enabled" : "Disabled");
 }
 
+void toggle_kernel_flash()
+{
+    script_kernel_flash = !script_kernel_flash;
+    ui_print("Kernel Flash: %s\n", script_kernel_flash ? "Enabled" : "Disabled");
+}
+
+void toggle_updater_binary()
+{
+    script_updater_binary = !script_updater_binary;
+    ui_print("Updater Binary %s\n", script_updater_binary ? "Internal" : "External");
+}
+
 int install_zip(const char* packagefilepath)
 {
     ui_print("\n-- Installing: %s\n", packagefilepath);
@@ -112,7 +127,10 @@ int install_zip(const char* packagefilepath)
 #define ITEM_CHOOSE_ZIP       0
 #define ITEM_APPLY_SDCARD     1
 #define ITEM_SIG_CHECK        2
-#define ITEM_CHOOSE_ZIP_INT   3
+#define ITEM_KERNEL_FLASH     3
+#define ITEM_UPDATER_BINARY   4
+#define ITEM_CHOOSE_ZIP_INT   5
+
 
 void show_install_update_menu()
 {
@@ -124,17 +142,19 @@ void show_install_update_menu()
     char* install_menu_items[] = {  "choose zip from sdcard",
                                     "apply /sdcard/update.zip",
                                     "toggle signature verification",
+                                    "toggle kernel flash",
+                                    "toggle updater binary",
                                     NULL,
                                     NULL };
 
     char *other_sd = NULL;
     if (volume_for_path("/emmc") != NULL) {
         other_sd = "/emmc/";
-        install_menu_items[3] = "choose zip from internal sdcard";
+        install_menu_items[ITEM_CHOOSE_ZIP_INT] = "choose zip from internal sdcard";
     }
     else if (volume_for_path("/external_sd") != NULL) {
         other_sd = "/external_sd/";
-        install_menu_items[3] = "choose zip from external sdcard";
+        install_menu_items[ITEM_CHOOSE_ZIP_INT] = "choose zip from external sdcard";
     }
     
     for (;;)
@@ -151,6 +171,12 @@ void show_install_update_menu()
                     install_zip(SDCARD_UPDATE_FILE);
                 break;
             }
+            case ITEM_KERNEL_FLASH:
+                toggle_kernel_flash();
+                break;
+            case ITEM_UPDATER_BINARY:
+                toggle_updater_binary();
+                break;
             case ITEM_CHOOSE_ZIP:
                 show_choose_zip_menu("/sdcard/");
                 break;
@@ -383,7 +409,7 @@ void show_choose_zip_menu(const char *mount_point)
         install_zip(file);
 }
 
-void show_nandroid_restore_menu(const char* path)
+void show_nandroid_restore_menu(const char* path, int restore_kernel)
 {
     if (ensure_path_mounted(path) != 0) {
         LOGE("Can't mount %s\n", path);
@@ -402,7 +428,7 @@ void show_nandroid_restore_menu(const char* path)
         return;
 
     if (confirm_selection("Confirm restore?", "Yes - Restore"))
-        nandroid_restore(file, 1, 1, 1, 1, 1, 0);
+        nandroid_restore(file, restore_kernel, 1, 1, 1, 1, 0);
 }
 
 void show_nandroid_delete_menu(const char* path)
@@ -707,7 +733,7 @@ int format_device(const char *device, const char *path, const char *fs_type) {
         reset_ext4fs_info();
         int result = make_ext4fs(device, length, v->mount_point, sehandle);
         if (result != 0) {
-            LOGE("format_volume: make_extf4fs failed on %s\n", device);
+            LOGE("format_volume: make_ext4fs failed on %s\n", device);
             return -1;
         }
         return 0;
@@ -724,6 +750,7 @@ int format_unknown_device(const char *device, const char* path, const char *fs_t
         return erase_raw_partition(fs_type, device);
 
     // if this is SDEXT:, don't worry about it if it does not exist.
+#ifdef RECOVERY_HAVE_SD_EXT
     if (0 == strcmp(path, "/sd-ext"))
     {
         struct stat st;
@@ -734,6 +761,7 @@ int format_unknown_device(const char *device, const char* path, const char *fs_t
             return 0;
         }
     }
+#endif
 
     if (NULL != fs_type) {
         if (strcmp("ext3", fs_type) == 0) {
@@ -764,7 +792,7 @@ int format_unknown_device(const char *device, const char* path, const char *fs_t
 
     static char tmp[PATH_MAX];
     if (strcmp(path, "/data") == 0) {
-        sprintf(tmp, "cd /data ; for f in $(ls -a | grep -v ^media$); do rm -rf $f; done");
+        sprintf(tmp, "cd /data ; for f in $(ls -a | grep -v ^media$ | grep -v ^\.layout_version$); do rm -rf $f; done");
         __system(tmp);
         // if the /data/media sdcard has already been migrated for android 4.2,
         // prevent the migration from happening again by writing the .layout_version
@@ -785,10 +813,14 @@ int format_unknown_device(const char *device, const char* path, const char *fs_t
         }
     }
     else {
-        sprintf(tmp, "rm -rf %s/*", path);
-        __system(tmp);
-        sprintf(tmp, "rm -rf %s/.*", path);
-        __system(tmp);
+        if (strlen(path) > 0 && !strstr(path, "efs") && strcmp(path, "/") != 0) {
+            sprintf(tmp, "rm -rf %s/*", path);
+            __system(tmp);
+            sprintf(tmp, "rm -rf %s/.*", path);
+            __system(tmp);
+        } else {
+            LOGE("Error format path is root or efs.\n");
+        }
     }
 
     ensure_path_unmounted(path);
@@ -933,6 +965,16 @@ void show_partition_menu()
             MountMenuEntry* e = &mount_menu[chosen_item];
             Volume* v = e->v;
 
+#ifdef TARGET_DEVICE_SC02C
+            if (strstr(v->device, MMCBLK_EFS) &&
+                !strstr(v->device, MMCBLK_DATA) &&
+                !strstr(v->device, MMCBLK_SDCARD) &&
+                !strstr(v->device, MMCBLK_HIDDEN)) {
+                ui_print("Error mounting %s!\n", v->mount_point);
+                return;
+            }
+#endif
+
             if (is_path_mounted(v->mount_point))
             {
                 if (0 != ensure_path_unmounted(v->mount_point))
@@ -997,7 +1039,9 @@ void show_nandroid_advanced_restore_menu(const char* path)
                             "Restore system",
                             "Restore data",
                             "Restore cache",
+#ifdef RECOVERY_HAVE_SD_EXT
                             "Restore sd-ext",
+#endif
                             "Restore wimax",
                             NULL
     };
@@ -1028,11 +1072,15 @@ void show_nandroid_advanced_restore_menu(const char* path)
             if (confirm_selection(confirm_restore, "Yes - Restore cache"))
                 nandroid_restore(file, 0, 0, 0, 1, 0, 0);
             break;
+#ifdef RECOVERY_HAVE_SD_EXT
         case 4:
             if (confirm_selection(confirm_restore, "Yes - Restore sd-ext"))
                 nandroid_restore(file, 0, 0, 0, 0, 1, 0);
             break;
         case 5:
+#else
+        case 4:
+#endif
             if (confirm_selection(confirm_restore, "Yes - Restore wimax"))
                 nandroid_restore(file, 0, 0, 0, 0, 0, 1);
             break;
@@ -1132,82 +1180,46 @@ void show_nandroid_menu()
             break;
         switch (chosen_item)
         {
-            case 0:
+            case 0: // backup
                 {
                     char backup_path[PATH_MAX];
-                    time_t t = time(NULL);
-                    struct tm *tmp = localtime(&t);
-                    if (tmp == NULL)
-                    {
-                        struct timeval tp;
-                        gettimeofday(&tp, NULL);
-                        sprintf(backup_path, "/sdcard/clockworkmod/backup/%d", tp.tv_sec);
-                    }
-                    else
-                    {
-                        strftime(backup_path, sizeof(backup_path), "/sdcard/clockworkmod/backup/%F.%H.%M.%S", tmp);
-                    }
+                    nandroid_generate_timestamp_path(backup_path, "/sdcard");
                     nandroid_backup(backup_path);
                 }
                 break;
-            case 1:
-                show_nandroid_restore_menu("/sdcard");
+            case 1: // restore
+                show_nandroid_restore_menu("/sdcard", 1);
                 break;
-            case 2:
+            case 2: // delete
                 show_nandroid_delete_menu("/sdcard");
                 break;
-            case 3:
+            case 3: // advanced restore
                 show_nandroid_advanced_restore_menu("/sdcard");
                 break;
-            case 4:
+            case 4: // free unused backup data
                 run_dedupe_gc(other_sd);
                 break;
-            case 5:
+            case 5: // choose default backup format
                 choose_default_backup_format();
                 break;
-            case 6:
-                {
+            case 6: // backup to other sdcard
+                if (other_sd != NULL) {
                     char backup_path[PATH_MAX];
-                    time_t t = time(NULL);
-                    struct tm *timeptr = localtime(&t);
-                    if (timeptr == NULL)
-                    {
-                        struct timeval tp;
-                        gettimeofday(&tp, NULL);
-                        if (other_sd != NULL) {
-                            sprintf(backup_path, "%s/clockworkmod/backup/%d", other_sd, tp.tv_sec);
-                        }
-                        else {
-                            break;
-                        }
-                    }
-                    else
-                    {
-                        if (other_sd != NULL) {
-                            char tmp[PATH_MAX];
-                            strftime(tmp, sizeof(tmp), "clockworkmod/backup/%F.%H.%M.%S", timeptr);
-                            // this sprintf results in:
-                            // /emmc/clockworkmod/backup/%F.%H.%M.%S (time values are populated too)
-                            sprintf(backup_path, "%s/%s", other_sd, tmp);
-                        }
-                        else {
-                            break;
-                        }
-                    }
+                    nandroid_generate_timestamp_path(backup_path, other_sd);
                     nandroid_backup(backup_path);
                 }
                 break;
-            case 7:
+            case 7: // restore from other sdcard
                 if (other_sd != NULL) {
-                    show_nandroid_restore_menu(other_sd);
+                    show_nandroid_restore_menu(other_sd, 1);
                 }
                 break;
-            case 8:
+            case 8: // advanced restore from other sdcard
                 if (other_sd != NULL) {
                     show_nandroid_advanced_restore_menu(other_sd);
                 }
                 break;
-            case 9:
+            case 9: // delete from other sdcard
                 if (other_sd != NULL) {
                     show_nandroid_delete_menu(other_sd);
                 }
@@ -1298,6 +1310,8 @@ void show_advanced_menu()
     };
 
     static char* list[] = { "reboot recovery",
+                            "reboot "REBOOT_BOOTLOADER_CMD,
+                            "root hacking",
                             "wipe dalvik cache",
                             "report error",
                             "key test",
@@ -1310,13 +1324,13 @@ void show_advanced_menu()
     };
 
     if (!can_partition("/sdcard")) {
-        list[6] = NULL;
+        list[8] = NULL;
     }
     if (!can_partition("/external_sd")) {
-        list[7] = NULL;
+        list[9] = NULL;
     }
     if (!can_partition("/emmc")) {
-        list[8] = NULL;
+        list[10] = NULL;
     }
 
     for (;;)
@@ -1326,26 +1340,44 @@ void show_advanced_menu()
             break;
         switch (chosen_item)
         {
-            case 0:
+            case 0: // reboot recovery
+#ifdef RECOVERY_USE_POST_RECOVERY_BOOT
+                __system("sh /sbin/postrecoveryboot.sh");
+#else
                 android_reboot(ANDROID_RB_RESTART2, 0, "recovery");
+#endif
                 break;
-            case 1:
+            case 1: // reboot download
+                android_reboot(ANDROID_RB_RESTART2, 0, REBOOT_BOOTLOADER_CMD);
+                break;
+            case 2: // root hacking
+                ensure_path_mounted("/system");
+                ensure_path_mounted("/data");
+                ui_print("Root hacking...\n");
+                __system("root_hacking " DEVICE_NAME);
+                ui_print("Done!\n");
+                break;
+            case 3: // wipe dalvik cache
                 if (0 != ensure_path_mounted("/data"))
                     break;
+#ifdef RECOVERY_HAVE_SD_EXT
                 ensure_path_mounted("/sd-ext");
+#endif
                 ensure_path_mounted("/cache");
                 if (confirm_selection( "Confirm wipe?", "Yes - Wipe Dalvik Cache")) {
                     __system("rm -r /data/dalvik-cache");
                     __system("rm -r /cache/dalvik-cache");
+#ifdef RECOVERY_HAVE_SD_EXT
                     __system("rm -r /sd-ext/dalvik-cache");
+#endif
                     ui_print("Dalvik Cache wiped.\n");
                 }
                 ensure_path_unmounted("/data");
                 break;
-            case 2:
+            case 4: // report error
                 handle_failure(1);
                 break;
-            case 3:
+            case 5: // key test
             {
                 ui_print("Outputting key codes.\n");
                 ui_print("Go back to end debugging.\n");
@@ -1360,23 +1392,23 @@ void show_advanced_menu()
                 while (action != GO_BACK);
                 break;
             }
-            case 4:
+            case 6: // show log
                 ui_printlogtail(12);
                 break;
-            case 5:
+            case 7: // fix permissions
                 ensure_path_mounted("/system");
                 ensure_path_mounted("/data");
                 ui_print("Fixing permissions...\n");
                 __system("fix_permissions");
                 ui_print("Done!\n");
                 break;
-            case 6:
+            case 8: // partition internal sdcard
                 partition_sdcard("/sdcard");
                 break;
-            case 7:
+            case 9: // partition external sdcard
                 partition_sdcard("/external_sd");
                 break;
-            case 8:
+            case 10: // partition emmc sdcard
                 partition_sdcard("/emmc");
                 break;
         }
@@ -1421,7 +1453,9 @@ void create_fstab()
     write_fstab_root("/emmc", file);
     write_fstab_root("/system", file);
     write_fstab_root("/sdcard", file);
+#ifdef RECOVERY_HAVE_SD_EXT
     write_fstab_root("/sd-ext", file);
+#endif
     fclose(file);
     LOGI("Completed outputting fstab.\n");
 }
@@ -1475,7 +1509,7 @@ void process_volumes() {
     }
     
     char backup_path[PATH_MAX];
-    time_t t = time(NULL);
+    //time_t t = time(NULL);
     char backup_name[PATH_MAX];
     struct timeval tp;
     gettimeofday(&tp, NULL);

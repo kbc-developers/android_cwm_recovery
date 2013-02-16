@@ -65,6 +65,9 @@ extern int device_perform_action(int which);
 // are erased after this returns (whether it returns success or not).
 int device_wipe_data();
 
+// galaxy factory reset after restore pre-install apk
+int restore_preinstall();
+
 #define NO_ACTION           -1
 
 #define HIGHLIGHT_UP        -2

@@ -39,19 +39,21 @@
 #include "flashutils/flashutils.h"
 #include <libgen.h>
 
-void nandroid_generate_timestamp_path(const char* backup_path)
+void nandroid_generate_timestamp_path(const char* backup_path, const char* base)
 {
-    time_t t = time(NULL);
+    time_t t = time(NULL) + RECOVERY_TZ_OFFSET;
     struct tm *tmp = localtime(&t);
     if (tmp == NULL)
     {
         struct timeval tp;
         gettimeofday(&tp, NULL);
-        sprintf(backup_path, "/sdcard/clockworkmod/backup/%d", tp.tv_sec);
+        sprintf(backup_path, "%s/clockworkmod/backup/%d", base, tp.tv_sec);
     }
     else
     {
-        strftime(backup_path, PATH_MAX, "/sdcard/clockworkmod/backup/%F.%H.%M.%S", tmp);
+        char buf[260];
+        strftime(buf, PATH_MAX, "clockworkmod/backup/%F.%H.%M.%S", tmp);
+        sprintf(backup_path, "%s/%s", base, buf);
     }
 }
 
@@ -89,10 +91,13 @@ static void nandroid_callback(const char* filename)
         ui_delete_line();
 }
 
+extern int sdcard_path_after_jb_mr1;
 static void compute_directory_stats(const char* directory)
 {
     char tmp[PATH_MAX];
-    sprintf(tmp, "find %s | %s wc -l > /tmp/dircount", directory, strcmp(directory, "/data") == 0 && is_data_media() ? "grep -v /data/media |" : "");
+    sprintf(tmp, "find %s | %s wc -l > /tmp/dircount", directory, strcmp(directory, "/data") == 0 && is_data_media() ?
+        (sdcard_path_after_jb_mr1 ? "grep -v /data/media/0 |" : "grep -v /data/media |") : "");
+
     __system(tmp);
     char count_text[100];
     FILE* f = fopen("/tmp/dircount", "r");
@@ -130,6 +135,7 @@ static int tar_compress_wrapper(const char* backup_path, const char* backup_file
     char tmp[PATH_MAX];
     sprintf(tmp, "cd $(dirname %s) ; touch %s.tar ; (tar cv %s $(basename %s) | split -a 1 -b 1000000000 /proc/self/fd/0 %s.tar.) 2> /proc/self/fd/1 ; exit $?", backup_path, backup_file_image, strcmp(backup_path, "/data") == 0 && is_data_media() ? "--exclude 'media'" : "", backup_path, backup_file_image);
 
+    LOGI("*** cmd=%s\n", tmp);
     FILE *fp = __popen(tmp, "r");
     if (fp == NULL) {
         ui_print("Unable to execute tar.\n");
@@ -395,7 +401,7 @@ int nandroid_backup(const char* backup_path)
 
     if (0 != (ret = nandroid_backup_partition_extended(backup_path, "/cache", 0)))
         return ret;
-
+#ifdef RECOVERY_HAVE_SD_EXT
     vol = volume_for_path("/sd-ext");
     if (vol == NULL || 0 != stat(vol->device, &s))
     {
@@ -408,7 +414,7 @@ int nandroid_backup(const char* backup_path)
         else if (0 != (ret = nandroid_backup_partition(backup_path, "/sd-ext")))
             return ret;
     }
-
+#endif
     ui_print("Generating md5 sum...\n");
     sprintf(tmp, "nandroid-md5.sh %s", backup_path);
     if (0 != (ret = __system(tmp))) {
@@ -582,10 +588,14 @@ int nandroid_restore_partition_extended(const char* backup_path, const char* mou
         // Other devices, like the Galaxy Nexus, XOOM, and Galaxy Tab 10.1
         // have a /sdcard symlinked to /data/media.
         // Or of volume does not exist (.android_secure), just rm -rf.
-        if (vol == NULL || 0 == strcmp(vol->fs_type, "auto"))
+        if (vol != NULL) {
+            if (0 == strcmp(vol->fs_type, "auto"))
+                backup_filesystem = NULL;
+            if (0 == strcmp(vol->mount_point, "/data") && is_data_media())
+                backup_filesystem = NULL;
+        } else {
             backup_filesystem = NULL;
-        if (0 == strcmp(vol->mount_point, "/data") && is_data_media())
-            backup_filesystem = NULL;
+        }
     }
 
     ensure_directory(mount_point);
@@ -722,10 +732,10 @@ int nandroid_restore(const char* backup_path, int restore_boot, int restore_syst
 
     if (restore_cache && 0 != (ret = nandroid_restore_partition_extended(backup_path, "/cache", 0)))
         return ret;
-
+#ifdef RECOVERY_HAVE_SD_EXT
     if (restore_sdext && 0 != (ret = nandroid_restore_partition(backup_path, "/sd-ext")))
         return ret;
-
+#endif
     sync();
     ui_set_background(BACKGROUND_ICON_NONE);
     ui_reset_progress();
@@ -751,7 +761,7 @@ int nandroid_main(int argc, char** argv)
             return nandroid_usage();
         
         char backup_path[PATH_MAX];
-        nandroid_generate_timestamp_path(backup_path);
+        nandroid_generate_timestamp_path(backup_path, "/sdcard");
         return nandroid_backup(backup_path);
     }
 
