@@ -447,6 +447,10 @@ get_menu_selection(char** headers, char** items, int menu_only,
     int wrap_count = 0;
 
     while (chosen_item < 0 && chosen_item != GO_BACK) {
+#ifdef TARGET_DEVICE_SC02C
+        usleep(50 * 1000); // wait 50msec
+        ui_clear_key_queue();
+#endif
         int key = ui_wait_key();
         int visible = ui_text_visible();
 
@@ -632,6 +636,7 @@ update_directory(const char* path, const char* unmount_when_done) {
 
 static void
 wipe_data(int confirm) {
+    int chosen_item = 0;
     if (confirm) {
         static char** title_headers = NULL;
 
@@ -648,7 +653,11 @@ wipe_data(int confirm) {
                           " No",
                           " No",
                           " No",
+#ifdef TARGET_DEVICE_SC02C
+                          " Yes -- delete all user data, and pre-install", // [5]
+#else
                           " No",
+#endif
                           " No",
                           " Yes -- delete all user data",   // [7]
                           " No",
@@ -656,8 +665,12 @@ wipe_data(int confirm) {
                           " No",
                           NULL };
 
-        int chosen_item = get_menu_selection(title_headers, items, 1, 0);
+        chosen_item = get_menu_selection(title_headers, items, 1, 0);
+#ifdef TARGET_DEVICE_SC02C
+        if (chosen_item != 5 && chosen_item != 7) {
+#else
         if (chosen_item != 7) {
+#endif
             return;
         }
     }
@@ -669,8 +682,16 @@ wipe_data(int confirm) {
     if (has_datadata()) {
         erase_volume("/datadata");
     }
+#ifdef RECOVERY_HAVE_SD_EXT
     erase_volume("/sd-ext");
+#endif
     erase_volume("/sdcard/.android_secure");
+#ifdef TARGET_DEVICE_SC02C
+    if (chosen_item == 5) {
+        ui_print("\n-- restore pre-install apk...\n");
+        restore_preinstall();
+    }
+#endif
     ui_print("Data wipe complete.\n");
 }
 
@@ -698,7 +719,6 @@ prompt_and_wait() {
         // statement below.
         chosen_item = device_perform_action(chosen_item);
 
-        int status;
         switch (chosen_item) {
             case ITEM_REBOOT:
                 poweroff=0;
@@ -799,18 +819,26 @@ main(int argc, char **argv) {
         }
         if (strstr(argv[0], "setprop"))
             return setprop_main(argc, argv);
+        if (strstr(argv[0], "getprop"))
+            return getprop_main(argc, argv);
         return busybox_driver(argc, argv);
     }
+
+#if defined(TARGET_DEVICE_SC05D) || defined(TARGET_DEVICE_SC03D)
     __system("/sbin/postrecoveryboot.sh");
+#endif
 
     int is_user_initiated_recovery = 0;
-    time_t start = time(NULL);
+    time_t start = time(NULL) + RECOVERY_TZ_OFFSET;
 
     // If these fail, there's not really anywhere to complain...
     freopen(TEMPORARY_LOG_FILE, "a", stdout); setbuf(stdout, NULL);
     freopen(TEMPORARY_LOG_FILE, "a", stderr); setbuf(stderr, NULL);
     printf("Starting recovery on %s", ctime(&start));
 
+#ifdef TARGET_DEVICE_SC02C
+    usleep(1000 * 1000); // wait 1sec
+#endif
     device_ui_init(&ui_parameters);
     ui_init();
     ui_print(EXPAND(RECOVERY_VERSION)"\n");
@@ -844,6 +872,9 @@ main(int argc, char **argv) {
         }
     }
 
+    // update package force null
+    update_package = NULL;
+
     LOGI("device_recovery_start()\n");
     device_recovery_start();
 
@@ -872,7 +903,77 @@ main(int argc, char **argv) {
     property_list(print_property, NULL);
     printf("\n");
 
+#ifdef TARGET_DEVICE_SC02C
+    /** force umount /system
+     * uncertainty in timing of umount reocvery.rc,
+     * run the umount when the recovery initialize completed.
+     */
+    ensure_path_unmounted("/system");
+#endif
+#ifdef TARGET_DEVICE_SC06D
+    {
+        char buf[100];
+        if (ensure_path_mounted("/sdcard") == 0) {
+            FILE* fp = fopen("/sdcard/clockworkmod/.date.now", "rb");
+            if (fp) {
+                memset(buf, 0, sizeof(buf));
+                fseek(fp, 0, SEEK_END);
+                size_t length = ftell(fp);
+                fseek(fp, 0L, SEEK_SET);
+                fread(buf, 1, length, fp);
+                fclose(fp);
+                remove("/sdcard/clockworkmod/.date.now");
+                remove("/sdcard/clockworkmod/.timeoffset");
+                
+                long time_now = atol(buf);
+                struct timeval tv;
+                gettimeofday(&tv, NULL);
+                long time_offset = time_now - tv.tv_sec + 10;
+                sprintf(buf, "%ld", time_offset);
+                FILE* ofp = fopen("/sdcard/clockworkmod/.timeoffset", "wb");
+                fwrite(buf, 1, strlen(buf), ofp);
+                fclose(ofp);
+                ui_print("Adjust time add %ssec\n", buf);
+            }
+            fp = fopen("/sdcard/clockworkmod/.timeoffset", "rb");
+            if (fp) {
+                memset(buf, 0, sizeof(buf));
+                fseek(fp, 0, SEEK_END);
+                size_t length = ftell(fp);
+                fseek(fp, 0L, SEEK_SET);
+                fread(buf, 1, length, fp);
+                fclose(fp);
+
+                long offset = atol(buf);
+                struct timeval tv;
+                gettimeofday(&tv, NULL);
+                tv.tv_usec = 0;
+                tv.tv_sec += offset;
+                settimeofday(&tv, NULL);
+                #ifdef RECOVERY_TZ_JPN
+                time_t t = time(NULL) + (60 * 60 * 9); // add 9 hours
+                #else
+                time_t t = time(NULL);
+                #endif
+                struct tm *tmp = localtime(&t);
+                strftime(buf, 100, "%F.%H.%M.%S", tmp);
+                ui_print("datetime: %s\n", buf);
+            } else {
+                LOGE("can't open .timeoffset\n");
+            }
+            ensure_path_unmounted("/sdcard");
+        } else {
+            LOGE("/sdcard mount error\n");
+        }
+    }
+#endif
+
     int status = INSTALL_SUCCESS;
+
+    if (wipe_data) {
+        wipe_data = 0;
+        ui_print("Don't support wipe data from system, force disabled.\n");
+    }
 
     if (update_package != NULL) {
         status = install_package(update_package);
@@ -922,8 +1023,10 @@ main(int argc, char **argv) {
 
     verify_root_and_recovery();
 
+#if 0 // don't support this feature
     // If there is a radio image pending, reboot now to install it.
     maybe_install_firmware_update(send_intent);
+#endif
 
     // Otherwise, get ready to boot the main system...
     finish_recovery(send_intent);

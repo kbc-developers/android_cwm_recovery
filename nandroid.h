@@ -12,4 +12,5 @@ unsigned nandroid_get_default_backup_format();
 #define NANDROID_BACKUP_FORMAT_TAR 0
 #define NANDROID_BACKUP_FORMAT_DUP 1
 
+void nandroid_generate_timestamp_path(const char* backup_path , const char* base);
 #endif

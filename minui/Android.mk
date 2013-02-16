@@ -12,7 +12,11 @@ endif
 ifneq ($(BOARD_CUSTOM_GRAPHICS),)
   LOCAL_SRC_FILES += $(BOARD_CUSTOM_GRAPHICS)
 else
+ifeq ($(TARGET_PRODUCT), cm_urushi)
+  LOCAL_SRC_FILES += graphics_urushi.c
+else
   LOCAL_SRC_FILES += graphics.c
+endif
 endif
 
 LOCAL_C_INCLUDES +=\

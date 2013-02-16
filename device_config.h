@@ -17,6 +17,10 @@
 #ifndef __RECOVERY_DEVICE_CONFIG_H__
 #define __RECOVERY_DEVICE_CONFIG_H__
 
+// COMMON
+#define RECOVERY_TZ_OFFSET (60 * 60 * 9); // 9 hours
+
+
 // SC06D --------------------------------------------------
 #ifdef TARGET_DEVICE_SC06D
 // ums
