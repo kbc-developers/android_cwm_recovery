@@ -910,7 +910,7 @@ main(int argc, char **argv) {
      */
     ensure_path_unmounted("/system");
 #endif
-#ifdef TARGET_DEVICE_SC06D
+#if defined(TARGET_DEVICE_SC06D) || defined(TARGET_DEVICE_ISW13HT)
     {
         char buf[100];
         if (ensure_path_mounted("/sdcard") == 0) {
