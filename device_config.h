@@ -193,7 +193,9 @@
 // ISW13HT ------------------------------------------------
 #ifdef TARGET_DEVICE_ISW13HT
 // ums
-#define BOARD_UMS_LUNFILE     "/sys/devices/platform/msm_hsusb/gadget/lun0/file"
+#define BOARD_UMS_LUNFILE0     "/sys/devices/platform/msm_hsusb/gadget/lun0/file"
+#define BOARD_UMS_LUNFILE1     "/sys/devices/platform/msm_hsusb/gadget/lun1/file"
+#define BOARD_UMS_LUNFILE2     "/sys/devices/platform/msm_hsusb/gadget/lun2/file"
 
 // mmcblk
 #define MMCBLK_BOOT           "mmcblk0p21"
