@@ -237,7 +237,7 @@
 #define UPDATER_BIN_PATH      "/sbin/updater"
 
 // key
-#define DEVICE_KEY_HOME       KEY_HOME
+#define DEVICE_KEY_HOME       KEY_HOMEPAGE
 
 // gesture
 #define GESTURE_UD_SWIPE_THRED       (80)
