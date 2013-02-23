@@ -27,11 +27,11 @@ int device_handle_key(int key_code, int visible) {
                 return HIGHLIGHT_UP;
 
 #if defined(TARGET_DEVICE_SC02C) || defined(TARGET_DEVICE_SC05D) || defined(TARGET_DEVICE_SC03D) ||\
-        defined(TARGET_DEVICE_SO03C) || defined(TARGET_DEVICE_ISW13HT) || defined(TARGET_DEVICE_SC02E)
+        defined(TARGET_DEVICE_SO03C) || defined(TARGET_DEVICE_ISW13HT)
             case KEY_HOME:
             case KEY_POWER:
 #endif
-#if defined(TARGET_DEVICE_SC06D)
+#if defined(TARGET_DEVICE_SC06D) || defined(TARGET_DEVICE_SC02E)
             case KEY_HOMEPAGE:
             case KEY_POWER:
 #endif

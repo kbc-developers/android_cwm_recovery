@@ -239,7 +239,7 @@
 #define UPDATER_BIN_PATH      "/sbin/updater"
 
 // key
-#define DEVICE_KEY_HOME       KEY_HOME
+#define DEVICE_KEY_HOME       KEY_HOMEPAGE
 
 // gesture
 #define GESTURE_UD_SWIPE_THRED       (80)
@@ -247,7 +247,7 @@
 #define GESTURE_TOUCH_THRED          (3)
 
 // strings
-#define DEVICE_NAME "SC06D"
+#define DEVICE_NAME "SC02E"
 #define REBOOT_BOOTLOADER_CMD "download"
 
 // option
