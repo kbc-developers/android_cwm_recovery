@@ -35,7 +35,7 @@ ifeq ($(TARGET_PRODUCT), cm_d2dcm)
 RECOVERY_NAME := CWM-based Galaxy S3 Recovery
 LOCAL_CFLAGS += -DTARGET_DEVICE_SC06D
 
-else ifeq ($(TARGET_PRODUCT), cm_galaxys2)
+else ifeq ($(TARGET_PRODUCT), cm_sc02c)
 RECOVERY_NAME := CWM-based Galaxy S2 Recovery
 LOCAL_CFLAGS += -DTARGET_DEVICE_SC02C
 
