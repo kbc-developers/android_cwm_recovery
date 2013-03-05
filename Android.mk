@@ -59,6 +59,10 @@ else ifeq ($(TARGET_PRODUCT), cm_t0lte)
 RECOVERY_NAME := CWM-based Galaxy Note2 Recovery
 LOCAL_CFLAGS += -DTARGET_DEVICE_SC02E
 
+else ifeq ($(TARGET_PRODUCT), cm_sc03e)
+RECOVERY_NAME := CWM-based Galaxy S3 alpha Recovery
+LOCAL_CFLAGS += -DTARGET_DEVICE_SC03E
+
 endif
 
 RECOVERY_VERSION := $(RECOVERY_NAME) v6.0.2.8_r0
