@@ -455,7 +455,7 @@ get_menu_selection(char** headers, char** items, int menu_only,
     int wrap_count = 0;
 
     while (chosen_item < 0 && chosen_item != GO_BACK) {
-#ifdef TARGET_DEVICE_SC02C
+#if defined(TARGET_DEVICE_SC02C) || defined(TARGET_DEVICE_ISW11SC)
         usleep(50 * 1000); // wait 50msec
         ui_clear_key_queue();
 #endif
@@ -661,7 +661,7 @@ wipe_data(int confirm) {
                           " No",
                           " No",
                           " No",
-#ifdef TARGET_DEVICE_SC02C
+#if defined(TARGET_DEVICE_SC02C) || defined(TARGET_DEVICE_ISW11SC)
                           " Yes -- delete all user data, and pre-install", // [5]
 #else
                           " No",
@@ -674,7 +674,7 @@ wipe_data(int confirm) {
                           NULL };
 
         chosen_item = get_menu_selection(title_headers, items, 1, 0);
-#ifdef TARGET_DEVICE_SC02C
+#if defined(TARGET_DEVICE_SC02C) || defined(TARGET_DEVICE_ISW11SC)
         if (chosen_item != 5 && chosen_item != 7) {
 #else
         if (chosen_item != 7) {
@@ -694,7 +694,7 @@ wipe_data(int confirm) {
     erase_volume("/sd-ext");
 #endif
     erase_volume("/sdcard/.android_secure");
-#ifdef TARGET_DEVICE_SC02C
+#if defined(TARGET_DEVICE_SC02C) || defined(TARGET_DEVICE_ISW11SC)
     if (chosen_item == 5) {
         ui_print("\n-- restore pre-install apk...\n");
         restore_preinstall();
@@ -889,7 +889,7 @@ main(int argc, char **argv) {
         if (strstr(argv[0], "mount") && !strstr(argv[0], "umount")) {
             if (argc > 1) {
                 int i, chg_system = 0, chg_data = 0;
-#ifdef TARGET_DEVICE_SC02C
+#if defined(TARGET_DEVICE_SC02C) || defined(TARGET_DEVICE_ISW11SC)
                 for (i = 1; i < argc; i++) {
                     if (strstr(argv[i], MMCBLK_EFS) &&
                         !strstr(argv[i], MMCBLK_DATA) &&
@@ -946,7 +946,7 @@ main(int argc, char **argv) {
     freopen(TEMPORARY_LOG_FILE, "a", stderr); setbuf(stderr, NULL);
     printf("Starting recovery on %s", ctime(&start));
 
-#ifdef TARGET_DEVICE_SC02C
+#if defined(TARGET_DEVICE_SC02C) || defined(TARGET_DEVICE_ISW11SC)
     usleep(1000 * 1000); // wait 1sec
 #endif
     device_ui_init(&ui_parameters);
@@ -1083,7 +1083,7 @@ main(int argc, char **argv) {
     property_list(print_property, NULL);
     printf("\n");
 
-#ifdef TARGET_DEVICE_SC02C
+#if defined(TARGET_DEVICE_SC02C) || defined(TARGET_DEVICE_ISW11SC)
     /** force umount /system
      * uncertainty in timing of umount reocvery.rc,
      * run the umount when the recovery initialize completed.

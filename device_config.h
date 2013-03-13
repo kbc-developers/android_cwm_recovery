@@ -86,6 +86,42 @@
 #endif
 // --------------------------------------------------------
 
+// ISW11SC --------------------------------------------------
+#ifdef TARGET_DEVICE_ISW11SC
+// ums
+#define BOARD_UMS_LUNFILE     "/sys/devices/virtual/android_usb/android0/f_mass_storage/lun/file"
+#define BOARD_UMS_LUNFILE0    "/sys/devices/virtual/android_usb/android0/f_mass_storage/lun0/file"
+#define BOARD_UMS_LUNFILE1    "/sys/devices/virtual/android_usb/android0/f_mass_storage/lun1/file"
+
+// mmcblk
+#define MMCBLK_EFS            "mmcblk0p1"
+#define MMCBLK_BOOT           "mmcblk0p5"
+#define MMCBLK_SYSTEM         "mmcblk0p9"
+#define MMCBLK_DATA           "mmcblk0p10"
+#define MMCBLK_SDCARD         "mmcblk0p11"
+#define MMCBLK_HIDDEN         "mmcblk0p12"
+
+// path
+#define UPDATER_BIN_PATH      "/sbin/updater"
+
+// key
+#define DEVICE_KEY_HOME       KEY_HOME
+
+// gesture
+#define GESTURE_UD_SWIPE_THRED       (20)
+#define GESTURE_BACK_SWIPE_THRED     (100)
+#define GESTURE_TOUCH_THRED          (1)
+
+// strings
+#define DEVICE_NAME "ISW11SC"
+#define REBOOT_BOOTLOADER_CMD "download"
+
+// option
+#define BOARD_HAS_SDCARD_EXTERNAL
+
+#endif
+// --------------------------------------------------------
+
 // SC05D --------------------------------------------------
 #ifdef TARGET_DEVICE_SC05D
 // ums

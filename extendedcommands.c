@@ -947,7 +947,7 @@ void show_partition_menu()
             MountMenuEntry* e = &mount_menu[chosen_item];
             Volume* v = e->v;
 
-#ifdef TARGET_DEVICE_SC02C
+#if defined(TARGET_DEVICE_SC02C) || defined(TARGET_DEVICE_ISW11SC)
             if (strstr(v->device, MMCBLK_EFS) &&
                 !strstr(v->device, MMCBLK_DATA) &&
                 !strstr(v->device, MMCBLK_SDCARD) &&

@@ -24,6 +24,8 @@ ifeq ($(TARGET_PRODUCT), cm_d2dcm)
 LOCAL_CFLAGS += -DTARGET_DEVICE_SC06D
 else ifeq ($(TARGET_PRODUCT), cm_galaxys2)
 LOCAL_CFLAGS += -DTARGET_DEVICE_SC02C
+else ifeq ($(TARGET_PRODUCT), cm_galaxys2wimax)
+LOCAL_CFLAGS += -DTARGET_DEVICE_ISW11SC
 else ifeq ($(TARGET_PRODUCT), cm_quincydcm)
 LOCAL_CFLAGS += -DTARGET_DEVICE_SC05D
 else ifeq ($(TARGET_PRODUCT), cm_celoxdcm)
