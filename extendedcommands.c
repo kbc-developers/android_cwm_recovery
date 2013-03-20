@@ -87,6 +87,11 @@ void write_string_to_file(const char* filename, const char* string) {
     fclose(file);
 }
 
+void write_recovery_version() {
+    write_string_to_file("/sdcard/0/clockworkmod/.recovery_version",EXPAND(RECOVERY_VERSION));
+    write_string_to_file("/sdcard/clockworkmod/.recovery_version",EXPAND(RECOVERY_VERSION));
+}
+
 void
 toggle_signature_check()
 {
@@ -178,6 +183,7 @@ void show_install_update_menu()
                 break;
             case ITEM_CHOOSE_ZIP:
                 show_choose_zip_menu("/sdcard/");
+                write_recovery_version();
                 break;
             case ITEM_CHOOSE_ZIP_INT:
                 if (other_sd != NULL)
@@ -250,7 +256,7 @@ char** gather_files(const char* directory, const char* fileExtensionOrDirectory,
                 char fullFileName[PATH_MAX];
                 strcpy(fullFileName, directory);
                 strcat(fullFileName, de->d_name);
-                stat(fullFileName, &info);
+                lstat(fullFileName, &info);
                 // make sure it is a directory
                 if (!(S_ISDIR(info.st_mode)))
                     continue;
@@ -1200,16 +1206,20 @@ void show_nandroid_menu()
                     char backup_path[PATH_MAX];
                     nandroid_generate_timestamp_path(backup_path, "/sdcard");
                     nandroid_backup(backup_path);
+                    write_recovery_version();
                 }
                 break;
             case 1: // restore
                 show_nandroid_restore_menu("/sdcard", 1);
+                write_recovery_version();
                 break;
             case 2: // delete
                 show_nandroid_delete_menu("/sdcard");
+                write_recovery_version();
                 break;
             case 3: // advanced restore
                 show_nandroid_advanced_restore_menu("/sdcard");
+                write_recovery_version();
                 break;
             case 4: // free unused backup data
                 run_dedupe_gc(other_sd);

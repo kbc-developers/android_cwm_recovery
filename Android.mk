@@ -65,7 +65,7 @@ LOCAL_CFLAGS += -DTARGET_DEVICE_SC03E
 
 endif
 
-RECOVERY_VERSION := $(RECOVERY_NAME) v6.0.2.9_r0
+RECOVERY_VERSION := $(RECOVERY_NAME) v6.0.2.10_r0
 
 LOCAL_CFLAGS += -DRECOVERY_VERSION="$(RECOVERY_VERSION)"
 RECOVERY_API_VERSION := 2
@@ -123,6 +123,8 @@ endif
 
 LOCAL_STATIC_LIBRARIES += libminui libpixelflinger_static libpng libcutils
 LOCAL_STATIC_LIBRARIES += libstdc++ libc
+
+LOCAL_STATIC_LIBRARIES += libselinux
 
 LOCAL_C_INCLUDES += system/extras/ext4_utils
 
