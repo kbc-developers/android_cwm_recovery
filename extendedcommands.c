@@ -48,6 +48,7 @@ static const char *SDCARD_UPDATE_FILE = "/sdcard/update.zip";
 
 int script_kernel_flash = 1;
 int script_updater_binary = 0;
+extern int sdcard_path_after_jb_mr1;
 
 int
 get_filtered_menu_selection(char** headers, char** items, int menu_only, int initial_selection, int items_count) {
@@ -90,7 +91,7 @@ void write_string_to_file(const char* filename, const char* string) {
 }
 
 void write_recovery_version() {
-    if ( is_data_media() ) {
+    if ( is_data_media() && sdcard_path_after_jb_mr1 ) {
         write_string_to_file("/sdcard/0/clockworkmod/.recovery_version",EXPAND(RECOVERY_VERSION) "\n" EXPAND(TARGET_DEVICE));
     }
     write_string_to_file("/sdcard/clockworkmod/.recovery_version",EXPAND(RECOVERY_VERSION) "\n" EXPAND(TARGET_DEVICE));
