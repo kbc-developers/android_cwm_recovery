@@ -1483,9 +1483,10 @@ void create_fstab()
     write_fstab_root("/emmc", file);
     write_fstab_root("/system", file);
     write_fstab_root("/sdcard", file);
+    write_fstab_root("/external_sd", file);
 #ifdef RECOVERY_HAVE_SD_EXT
     write_fstab_root("/sd-ext", file);
-    write_fstab_root("/external_sd", file);
+#endif
     fclose(file);
     LOGI("Completed outputting fstab.\n");
 }
