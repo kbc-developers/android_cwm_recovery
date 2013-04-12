@@ -512,6 +512,7 @@ static int input_callback(int fd, short revents, void *data)
                     s_first_y = s_last_y = GESTURE_NULL_POS;
                     s_first_x = s_last_x = GESTURE_NULL_POS;
                     if (s_first_touch != 0) {
+                        s_first_touch = 1;
                         return 0;
                     }
                     if ((s_last_fake_event_ms + 300) > getCurrentMs()) {
