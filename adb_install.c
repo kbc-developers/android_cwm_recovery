@@ -129,7 +129,7 @@ apply_from_adb() {
 
     // kill the child
     kill(data.child, SIGTERM);
-    pthread_join(&sideload_thread, NULL);
+    pthread_join(sideload_thread, NULL);
     ui_clear_key_queue();
 
     struct stat st;
@@ -151,6 +151,8 @@ apply_from_adb() {
         ui_set_background(BACKGROUND_ICON_ERROR);
         ui_print("Installation aborted.\n");
     }
+
+    remove(ADB_SIDELOAD_FILENAME);
 
     return install_status;
 }
