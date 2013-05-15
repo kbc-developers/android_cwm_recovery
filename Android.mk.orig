@@ -17,7 +17,13 @@ LOCAL_SRC_FILES := \
     ../../system/core/toolbox/dynarray.c \
     firmware.c \
     edifyscripting.c \
+<<<<<<< HEAD
+    setprop.c \
+    getprop.c \
+    dynarray.c \
+=======
     prop.c \
+>>>>>>> vendor-cm-cm-10.1
     default_recovery_ui.c \
     adb_install.c \
     verifier.c \
