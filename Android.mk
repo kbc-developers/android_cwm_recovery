@@ -62,6 +62,10 @@ else ifeq ($(TARGET_PRODUCT), cm_sc03e)
 RECOVERY_NAME := CWM-based Galaxy S3 alpha Recovery
 LOCAL_CFLAGS += -DTARGET_DEVICE_SC03E
 
+else ifeq ($(TARGET_PRODUCT), cm_jfltedcm)
+RECOVERY_NAME := CWM-based Galaxy S4 dcm Recovery
+LOCAL_CFLAGS += -DTARGET_DEVICE_SC04E
+
 endif
 
 RECOVERY_VERSION := $(RECOVERY_NAME) v6.0.3.2_r0
