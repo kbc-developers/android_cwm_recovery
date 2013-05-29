@@ -313,7 +313,7 @@
 #define GESTURE_TOUCH_THRED          (3)
 
 // strings
-#define DEVICE_NAME "SC03E"
+#define DEVICE_NAME "SC04E"
 #define REBOOT_BOOTLOADER_CMD "download"
 
 // option
