@@ -309,7 +309,7 @@ int ensure_path_mounted_at_mount_point(const char* path, const char* mount_point
     } else {
         // let's try mounting with the mount binary and hope for the best.
         char mount_cmd[PATH_MAX];
-        sprintf(mount_cmd, "mount %s", path);
+        sprintf(mount_cmd, "mount %s", mount_point);
         int ret = __system(mount_cmd);
         if (ret) {
             LOGE("__system(%s) ret=%d\n", mount_cmd, ret);
