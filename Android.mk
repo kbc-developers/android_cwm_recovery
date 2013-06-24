@@ -66,6 +66,10 @@ else ifeq ($(TARGET_PRODUCT), cm_jfltedcm)
 RECOVERY_NAME := CWM-based Galaxy S4 dcm Recovery
 LOCAL_CFLAGS += -DTARGET_DEVICE_SC04E
 
+else ifeq ($(TARGET_PRODUCT), cm_quincytabdcm)
+RECOVERY_NAME := CWM-based Galaxy tab 7.7 plus Recovery
+LOCAL_CFLAGS += -DTARGET_DEVICE_SC01E
+
 endif
 
 RECOVERY_VERSION := $(RECOVERY_NAME) v6.0.3.2_r0
