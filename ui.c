@@ -539,7 +539,11 @@ static int input_callback(int fd, short revents, void *data)
                     return 0;
                 }
             }
+#ifndef TARGET_DEVICE_SC01E
         } else if (ev.code == ABS_MT_POSITION_Y) {
+#else
+        } else if (ev.code == ABS_MT_POSITION_X) {
+#endif
             if (s_tracking_id != -1) {
                 if (s_last_y == GESTURE_NULL_POS) {
                     s_first_y = s_last_y = ev.value;
@@ -549,7 +553,11 @@ static int input_callback(int fd, short revents, void *data)
                     if (abs_val > GESTURE_UD_SWIPE_THRED) {
                         s_last_y = ev.value;
                         s_first_touch = 0;
+#ifndef TARGET_DEVICE_SC01E
                         if (val > 0) {
+#else
+                        if (val <= 0) {
+#endif
                             fake_key = 1;
                             ev.type = EV_KEY;
                             ev.code = KEY_VOLUMEDOWN;
@@ -566,7 +574,11 @@ static int input_callback(int fd, short revents, void *data)
                     }
                 }
             }
+#ifndef TARGET_DEVICE_SC01E
         } else if (ev.code == ABS_MT_POSITION_X) {
+#else
+        } else if (ev.code == ABS_MT_POSITION_Y) {
+#endif
             if (s_tracking_id != -1) {
                 if (s_last_x == GESTURE_NULL_POS) {
                     s_first_x = s_last_x = ev.value;
