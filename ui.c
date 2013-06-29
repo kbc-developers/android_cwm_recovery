@@ -539,7 +539,7 @@ static int input_callback(int fd, short revents, void *data)
                     return 0;
                 }
             }
-#ifndef TARGET_DEVICE_SC01E
+#ifndef RECOVERY_TOUCH_GESTURE_ROTATION
         } else if (ev.code == ABS_MT_POSITION_Y) {
 #else
         } else if (ev.code == ABS_MT_POSITION_X) {
@@ -553,7 +553,7 @@ static int input_callback(int fd, short revents, void *data)
                     if (abs_val > GESTURE_UD_SWIPE_THRED) {
                         s_last_y = ev.value;
                         s_first_touch = 0;
-#ifndef TARGET_DEVICE_SC01E
+#ifndef RECOVERY_TOUCH_GESTURE_ROTATION
                         if (val > 0) {
 #else
                         if (val <= 0) {
@@ -574,7 +574,7 @@ static int input_callback(int fd, short revents, void *data)
                     }
                 }
             }
-#ifndef TARGET_DEVICE_SC01E
+#ifndef RECOVERY_TOUCH_GESTURE_ROTATION
         } else if (ev.code == ABS_MT_POSITION_X) {
 #else
         } else if (ev.code == ABS_MT_POSITION_Y) {
