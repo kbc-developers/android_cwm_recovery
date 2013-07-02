@@ -296,11 +296,6 @@
 #define BOARD_UMS_LUNFILE1     "/sys/devices/platform/msm_hsusb/gadget/lun1/file"
 #define BOARD_UMS_LUNFILE2     "/sys/devices/platform/msm_hsusb/gadget/lun2/file"
 
-// mmcblk
-#define MMCBLK_BOOT           "mmcblk0p20"
-#define MMCBLK_SYSTEM         "mmcblk0p16"
-#define MMCBLK_DATA           "mmcblk0p29"
-
 // path
 #define UPDATER_BIN_PATH      "/sbin/updater"
 
@@ -308,8 +303,8 @@
 #define DEVICE_KEY_HOME       KEY_HOME
 
 // gesture
-#define GESTURE_UD_SWIPE_THRED       (80)
-#define GESTURE_BACK_SWIPE_THRED     (200)
+#define GESTURE_UD_SWIPE_THRED       (120)
+#define GESTURE_BACK_SWIPE_THRED     (250)
 #define GESTURE_TOUCH_THRED          (3)
 
 // strings
