@@ -25,8 +25,13 @@
 #include "minui.h"
 #include "cutils/log.h"
 
+#ifndef TARGET_DEVICE_SC01E
 #define MAX_DEVICES 16
 #define MAX_MISC_FDS 16
+#else
+#define MAX_DEVICES 18
+#define MAX_MISC_FDS 18
+#endif
 
 #define BITS_PER_LONG (sizeof(unsigned long) * 8)
 #define BITS_TO_LONGS(x) (((x) + BITS_PER_LONG - 1) / BITS_PER_LONG)
