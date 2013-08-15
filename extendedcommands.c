@@ -1362,12 +1362,12 @@ void show_advanced_menu()
                             "power off",
                             "root hacking",
                             "wipe dalvik cache",
-                            "report error",5
-                            "key test",6
-                            "show log",7
-                            "partition sdcard",8
-                            "partition external sdcard",9
-                            "partition internal sdcard",10
+                            "report error",
+                            "key test",
+                            "show log",
+                            "partition sdcard",
+                            "partition external sdcard",
+                            "partition internal sdcard",
                             NULL
     };
 
