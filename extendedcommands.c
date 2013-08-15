@@ -1292,8 +1292,14 @@ static void partition_sdcard(const char* volume) {
                                   "256M",
                                   NULL };
 
+    static char* partition_types[] = { "ext3",
+                                       "ext4",
+                                       NULL
+    };
+
     static char* ext_headers[] = { "Ext Size", "", NULL };
     static char* swap_headers[] = { "Swap Size", "", NULL };
+    static char* fstype_headers[] = {"Partition Type", "", NULL };
 
     int ext_size = get_menu_selection(ext_headers, ext_sizes, 0, 0);
     if (ext_size == GO_BACK)
@@ -1303,6 +1309,10 @@ static void partition_sdcard(const char* volume) {
     if (swap_size == GO_BACK)
         return;
 
+    int partition_type = get_menu_selection(fstype_headers, partition_types, 0, 0);
+    if (partition_type == GO_BACK)
+        return;
+
     char sddevice[256];
     Volume *vol = volume_for_path(volume);
     strcpy(sddevice, vol->device);
@@ -1310,7 +1320,7 @@ static void partition_sdcard(const char* volume) {
     sddevice[strlen("/dev/block/mmcblkX")] = NULL;
     char cmd[PATH_MAX];
     setenv("SDPATH", sddevice, 1);
-    sprintf(cmd, "sdparted -es %s -ss %s -efs ext3 -s", ext_sizes[ext_size], swap_sizes[swap_size]);
+    sprintf(cmd, "sdparted -es %s -ss %s -efs %s -s", ext_sizes[ext_size], swap_sizes[swap_size], partition_types[partition_type]);
     ui_print("Partitioning SD Card... please wait...\n");
     if (0 == __system(cmd))
         ui_print("Done!\n");
@@ -1348,26 +1358,33 @@ void show_advanced_menu()
     };
 
     static char* list[] = { "reboot recovery",
-                            "reboot "REBOOT_BOOTLOADER_CMD,
+                            "reboot to bootloader",
+                            "power off",
                             "root hacking",
                             "wipe dalvik cache",
-                            "report error",
-                            "key test",
-                            "show log",
-                            "partition sdcard",
-                            "partition external sdcard",
-                            "partition internal sdcard",
+                            "report error",5
+                            "key test",6
+                            "show log",7
+                            "partition sdcard",8
+                            "partition external sdcard",9
+                            "partition internal sdcard",10
                             NULL
     };
 
-    if (!can_partition("/sdcard")) {
-        list[7] = NULL;
+    char bootloader_mode[PROPERTY_VALUE_MAX];
+    property_get("ro.bootloader.mode", bootloader_mode, "");
+    if (!strcmp(bootloader_mode, "download")) {
+        list[1] = "reboot to download mode";
     }
-    if (!can_partition("/external_sd")) {
+
+    if (!can_partition("/sdcard")) {
         list[8] = NULL;
     }
-    if (!can_partition("/emmc")) {
+    if (!can_partition("/external_sd")) {
         list[9] = NULL;
+    }
+    if (!can_partition("/emmc")) {
+        list[10] = NULL;
     }
 
     for (;;)
@@ -1377,24 +1394,41 @@ void show_advanced_menu()
             break;
         switch (chosen_item)
         {
-            case 0: // reboot recovery
+            case 0: //reboot recovery
+            {
+                ui_print("Rebooting recovery...\n");
 #ifdef RECOVERY_USE_POST_RECOVERY_BOOT
                 __system("sh /sbin/postrecoveryboot.sh");
 #else
-                android_reboot(ANDROID_RB_RESTART2, 0, "recovery");
+                reboot_main_system(ANDROID_RB_RESTART2, 0, "recovery");
 #endif
                 break;
-            case 1: // reboot download
-                android_reboot(ANDROID_RB_RESTART2, 0, REBOOT_BOOTLOADER_CMD);
+            }
+            case 1: //reboot download/bootloader
+            {
+                if (!strcmp(bootloader_mode, "download")) {
+                    ui_print("Rebooting to download mode...\n");
+                    reboot_main_system(ANDROID_RB_RESTART2, 0, "download");
+                } else {
+                    ui_print("Rebooting to bootloader...\n");
+                    reboot_main_system(ANDROID_RB_RESTART2, 0, "bootloader");
+                }
                 break;
-            case 2: // root hacking
+            }
+            case 2: //power off
+            {
+                ui_print("Shutting down...\n");
+                reboot_main_system(ANDROID_RB_POWEROFF, 0, 0);
+                break;
+            }
+            case 3: // root hacking
                 ensure_path_mounted("/system");
                 ensure_path_mounted("/data");
                 ui_print("Root hacking...\n");
                 __system("root_hacking " DEVICE_NAME);
                 ui_print("Done!\n");
                 break;
-            case 3: // wipe dalvik cache
+            case 4: //wipe cache
                 if (0 != ensure_path_mounted("/data"))
                     break;
 #ifdef RECOVERY_HAVE_SD_EXT
@@ -1411,10 +1445,10 @@ void show_advanced_menu()
                 }
                 ensure_path_unmounted("/data");
                 break;
-            case 4: // report error
+            case 5: // report error
                 handle_failure(1);
                 break;
-            case 5: // key test
+            case 6: // key test
             {
                 ui_print("Outputting key codes.\n");
                 ui_print("Go back to end debugging.\n");
@@ -1429,16 +1463,16 @@ void show_advanced_menu()
                 while (action != GO_BACK);
                 break;
             }
-            case 6: // show log
+            case 7: // show log
                 ui_printlogtail(12);
                 break;
-            case 7: // partition internal sdcard
+            case 8: // partition internal sdcard
                 partition_sdcard("/sdcard");
                 break;
-            case 8: // partition external sdcard
+            case 9: // partition external sdcard
                 partition_sdcard("/external_sd");
                 break;
-            case 9: // partition emmc sdcard
+            case 10: // partition emmc sdcard
                 partition_sdcard("/emmc");
                 break;
         }
@@ -1612,15 +1646,22 @@ int verify_root_and_recovery() {
 
     int ret = 0;
     struct stat st;
-    if (0 == lstat("/system/etc/install-recovery.sh", &st)) {
-        if (st.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) {
-            ui_show_text(1);
-            ret = 1;
-            if (confirm_selection("ROM may flash stock recovery on boot. Fix?", "Yes - Disable recovery flash")) {
-                __system("chmod -x /system/etc/install-recovery.sh");
+    // check to see if install-recovery.sh is going to clobber recovery
+    // install-recovery.sh is also used to run the su daemon on stock rom for 4.3+
+    // so verify that doesn't exist...
+    if (0 != lstat("/system/etc/.installed_su_daemon", &st)) {
+        // check install-recovery.sh exists and is executable
+        if (0 == lstat("/system/etc/install-recovery.sh", &st)) {
+            if (st.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) {
+                ui_show_text(1);
+                ret = 1;
+                if (confirm_selection("ROM may flash stock recovery on boot. Fix?", "Yes - Disable recovery flash")) {
+                    __system("chmod -x /system/etc/install-recovery.sh");
+                }
             }
         }
     }
+
 
     int exists = 0;
     if (0 == lstat("/system/bin/su", &st)) {
@@ -1653,9 +1694,7 @@ int verify_root_and_recovery() {
         ui_show_text(1);
         ret = 1;
         if (confirm_selection("Root access is missing. Root device?", "Yes - Root device (/system/xbin/su)")) {
-            __system("cp /sbin/su.recovery /system/xbin/su");
-            __system("chmod 6755 /system/xbin/su");
-            __system("ln -sf /system/xbin/su /system/bin/su");
+            __system("/sbin/install-su.sh");
         }
     }
 
