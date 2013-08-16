@@ -484,7 +484,7 @@ static struct lun_node *lun_head = NULL;
 static struct lun_node *lun_tail = NULL;
 
 int control_usb_storage_set_lun(Volume* vol, bool enable, const char *lun_file) {
-    const char *vol_device = enable ? vol->device : "";
+    const char *vol_device = enable ? vol->blk_device : "";
     int fd;
     struct lun_node *node;
 
@@ -497,7 +497,7 @@ int control_usb_storage_set_lun(Volume* vol, bool enable, const char *lun_file) 
     }
 
     // Open a handle to the LUN file
-    LOGI("Trying %s on LUN file %s\n", vol->device, lun_file);
+    LOGI("Trying %s on LUN file %s\n", vol->blk_device, lun_file);
     if ((fd = open(lun_file, O_WRONLY)) < 0) {
         LOGW("Unable to open ums lunfile %s (%s)\n", lun_file, strerror(errno));
         return -1;
@@ -505,7 +505,7 @@ int control_usb_storage_set_lun(Volume* vol, bool enable, const char *lun_file) 
 
     // Write the volume path to the LUN file
     if ((write(fd, vol_device, strlen(vol_device) + 1) < 0) &&
-       (!enable || !vol->device2 || (write(fd, vol->device2, strlen(vol->device2)) < 0))) {
+       (!enable || !vol->blk_device2 || (write(fd, vol->blk_device2, strlen(vol->blk_device2)) < 0))) {
         LOGW("Unable to write to ums lunfile %s (%s)\n", lun_file, strerror(errno));
         close(fd);
         return -1;
@@ -524,7 +524,7 @@ int control_usb_storage_set_lun(Volume* vol, bool enable, const char *lun_file) 
            lun_tail = node;
         }
 
-        LOGI("Successfully %sshared %s on LUN file %s\n", enable ? "" : "un", vol->device, lun_file);
+        LOGI("Successfully %sshared %s on LUN file %s\n", enable ? "" : "un", vol->blk_device, lun_file);
         return 0;
     }
 }
@@ -581,7 +581,7 @@ int control_usb_storage_for_lun(Volume* vol, bool enable) {
     }
 
     // All LUNs were exhausted and none worked
-    LOGW("Could not %sable %s on LUN %d\n", enable ? "en" : "dis", vol->device, lun_num);
+    LOGW("Could not %sable %s on LUN %d\n", enable ? "en" : "dis", vol->blk_device, lun_num);
 
     return -1;  // -1 failure, 0 success
 }
@@ -725,7 +725,7 @@ int format_device(const char *device, const char *path, const char *fs_type) {
     }
  
     if (strcmp(v->mount_point, path) != 0) {
-        return format_unknown_device(v->device, path, NULL);
+        return format_unknown_device(v->blk_device, path, NULL);
     }
 
     if (ensure_path_unmounted(path) != 0) {
@@ -787,7 +787,7 @@ int format_unknown_device(const char *device, const char* path, const char *fs_t
     {
         struct stat st;
         Volume *vol = volume_for_path("/sd-ext");
-        if (vol == NULL || 0 != stat(vol->device, &st))
+        if (vol == NULL || 0 != stat(vol->blk_device, &st))
         {
             ui_print("No app2sd partition found. Skipping format of /sd-ext.\n");
             return 0;
@@ -923,6 +923,9 @@ void show_partition_menu()
 
     for (i = 0; i < num_volumes; ++i) {
         Volume* v = &device_volumes[i];
+
+        if (fs_mgr_is_voldmanaged(v)) continue;
+
         if(strcmp("ramdisk", v->fs_type) != 0 && strcmp("mtd", v->fs_type) != 0 && strcmp("emmc", v->fs_type) != 0 && strcmp("bml", v->fs_type) != 0) {
             if (strcmp("datamedia", v->fs_type) != 0) {
                 sprintf(&mount_menu[mountable_volumes].mount, "mount %s", v->mount_point);
@@ -1000,10 +1003,10 @@ void show_partition_menu()
             Volume* v = e->v;
 
 #ifdef TARGET_DEVICE_SC02C
-            if (strstr(v->device, MMCBLK_EFS) &&
-                !strstr(v->device, MMCBLK_DATA) &&
-                !strstr(v->device, MMCBLK_SDCARD) &&
-                !strstr(v->device, MMCBLK_HIDDEN)) {
+            if (strstr(v->blk_device, MMCBLK_EFS) &&
+                !strstr(v->blk_device, MMCBLK_DATA) &&
+                !strstr(v->blk_device, MMCBLK_SDCARD) &&
+                !strstr(v->blk_device, MMCBLK_HIDDEN)) {
                 ui_print("Error mounting %s!\n", v->mount_point);
                 return;
             }
@@ -1315,7 +1318,7 @@ static void partition_sdcard(const char* volume) {
 
     char sddevice[256];
     Volume *vol = volume_for_path(volume);
-    strcpy(sddevice, vol->device);
+    strcpy(sddevice, vol->blk_device);
     // we only want the mmcblk, not the partition
     sddevice[strlen("/dev/block/mmcblkX")] = NULL;
     char cmd[PATH_MAX];
@@ -1335,10 +1338,10 @@ int can_partition(const char* volume) {
         return 0;
     }
 
-    int vol_len = strlen(vol->device);
+    int vol_len = strlen(vol->blk_device);
     // do not allow partitioning of a device that isn't mmcblkX or mmcblkXp1
-    if (vol->device[vol_len - 2] == 'p' && vol->device[vol_len - 1] != '1') {
-        LOGI("Can't partition unsafe device: %s\n", vol->device);
+    if (vol->blk_device[vol_len - 2] == 'p' && vol->blk_device[vol_len - 1] != '1') {
+        LOGI("Can't partition unsafe device: %s\n", vol->blk_device);
         return 0;
     }
     
@@ -1488,10 +1491,10 @@ void write_fstab_root(char *path, FILE *file)
     }
 
     char device[200];
-    if (vol->device[0] != '/')
-        get_partition_device(vol->device, device);
+    if (vol->blk_device[0] != '/')
+        get_partition_device(vol->blk_device, device);
     else
-        strcpy(device, vol->device);
+        strcpy(device, vol->blk_device);
 
     fprintf(file, "%s ", device);
     fprintf(file, "%s ", path);
@@ -1541,7 +1544,7 @@ int bml_check_volume(const char *path) {
     
     ui_print("%s may be rfs. Checking...\n", path);
     char tmp[PATH_MAX];
-    sprintf(tmp, "mount -t rfs %s %s", vol->device, path);
+    sprintf(tmp, "mount -t rfs %s %s", vol->blk_device, path);
     int ret = __system(tmp);
     printf("%d\n", ret);
     return ret == 0 ? 1 : 0;
