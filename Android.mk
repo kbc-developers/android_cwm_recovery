@@ -35,13 +35,58 @@ LOCAL_FORCE_STATIC_EXECUTABLE := true
 
 RECOVERY_FSTAB_VERSION := 2
 
+ifndef RECOVERY_NAME
+
 ifdef I_AM_KOUSH
-RECOVERY_NAME := ClockworkMod Recovery
+RECOVERY_NAME := ClockworkMod
 LOCAL_CFLAGS += -DI_AM_KOUSH
 else
-ifndef RECOVERY_NAME
-RECOVERY_NAME := CWM-based Recovery
+RECOVERY_NAME := CWM-based
 endif
+
+ifeq ($(TARGET_PRODUCT), cm_d2dcm)
+RECOVERY_NAME += Galaxy S3
+LOCAL_CFLAGS += -DTARGET_DEVICE_SC06D
+
+else ifeq ($(TARGET_PRODUCT), cm_sc02c)
+RECOVERY_NAME += Galaxy S2
+LOCAL_CFLAGS += -DTARGET_DEVICE_SC02C
+
+else ifeq ($(TARGET_PRODUCT), cm_quincydcm)
+RECOVERY_NAME += Galaxy Note
+LOCAL_CFLAGS += -DTARGET_DEVICE_SC05D
+
+else ifeq ($(TARGET_PRODUCT), cm_celoxdcm)
+RECOVERY_NAME += Galaxy S2 LTE
+LOCAL_CFLAGS += -DTARGET_DEVICE_SC03D
+
+else ifeq ($(TARGET_PRODUCT), cm_urushi)
+RECOVERY_NAME += Xperia Ray
+LOCAL_CFLAGS += -DTARGET_DEVICE_SO03C
+
+else ifeq ($(TARGET_PRODUCT), cm_valentewx)
+RECOVERY_NAME += HTC J
+LOCAL_CFLAGS += -DTARGET_DEVICE_ISW13HT
+
+else ifeq ($(TARGET_PRODUCT), cm_sc02e)
+RECOVERY_NAME += Galaxy Note2
+LOCAL_CFLAGS += -DTARGET_DEVICE_SC02E
+
+else ifeq ($(TARGET_PRODUCT), cm_sc03e)
+RECOVERY_NAME += Galaxy S3 alpha
+LOCAL_CFLAGS += -DTARGET_DEVICE_SC03E
+
+else ifeq ($(TARGET_PRODUCT), cm_jfltedcm)
+RECOVERY_NAME += Galaxy S4 dcm
+LOCAL_CFLAGS += -DTARGET_DEVICE_SC04E
+
+else ifeq ($(TARGET_PRODUCT), cm_quincytabdcm)
+RECOVERY_NAME += Galaxy tab 7.7 plus
+LOCAL_CFLAGS += -DTARGET_DEVICE_SC01E
+endif
+
+RECOVERY_NAME += Recovery
+
 endif
 
 RECOVERY_VERSION := $(RECOVERY_NAME) v6.0.4.5
@@ -65,6 +110,10 @@ ifeq ($(ENABLE_LOKI_RECOVERY),true)
   LOCAL_SRC_FILES += \
     compact_loki.c
 endif
+
+# kbc custom recovery flags
+#LOCAL_CFLAGS += -DRECOVERY_TOUCH_GESTURE
+
 
 BOARD_RECOVERY_CHAR_WIDTH := $(shell echo $(BOARD_USE_CUSTOM_RECOVERY_FONT) | cut -d _  -f 2 | cut -d . -f 1 | cut -d x -f 1)
 BOARD_RECOVERY_CHAR_HEIGHT := $(shell echo $(BOARD_USE_CUSTOM_RECOVERY_FONT) | cut -d _  -f 2 | cut -d . -f 1 | cut -d x -f 2)
