@@ -1012,6 +1012,9 @@ main(int argc, char **argv) {
     ui_print("Swipe up/down to change selections.\n");
     ui_print("Swipe to the right for enter.\n");
     ui_print("Swipe to the left for back.\n");
+#ifdef RECOVERY_TOUCH_GESTURE
+    ui_print("Tap for enter.\n");
+#endif
 #endif
 #endif
 

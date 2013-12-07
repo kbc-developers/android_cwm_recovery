@@ -10,6 +10,16 @@ static int diff_y = 0;
 static int min_x_swipe_px = 100;
 static int min_y_swipe_px = 80;
 
+#ifdef RECOVERY_TOUCH_GESTURE
+static long s_last_fake_event_ms = 0;
+
+static long getCurrentMs() {
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return tv.tv_sec * 1000 + tv.tv_usec / 1000;
+}
+#endif	//#ifdef RECOVERY_TOUCH_GESTURE
+
 static void set_min_swipe_lengths() {
     char value[PROPERTY_VALUE_MAX];
     property_get("ro.sf.lcd_density", value, "0");
@@ -45,6 +55,7 @@ void swipe_handle_input(int fd, struct input_event *ev) {
     if(ev->type == EV_ABS && ev->code == ABS_MT_TRACKING_ID) {
         if(in_touch == 0) {
             in_touch = 1;
+            s_last_fake_event_ms = getCurrentMs();
             reset_gestures();
         } else { // finger lifted
             ev->type = EV_KEY;
@@ -54,8 +65,13 @@ void swipe_handle_input(int fd, struct input_event *ev) {
             } else if(slide_left == 1) {
                 ev->code = KEY_BACK;
                 slide_left = 0;
+#ifdef RECOVERY_TOUCH_GESTURE
+            } else if( (abs(diff_x) <= 10) && (abs(diff_y) <= 10) ) {
+              if ((s_last_fake_event_ms + 300) < getCurrentMs()) {
+                 ev->code = KEY_POWER;
+              }
+#endif	//#ifdef RECOVERY_TOUCH_GESTURE
             }
-
             ev->value = 1;
             in_touch = 0;
             reset_gestures();
