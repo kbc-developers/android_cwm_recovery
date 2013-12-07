@@ -43,7 +43,7 @@
 
 void nandroid_generate_timestamp_path(char* backup_path)
 {
-    time_t t = time(NULL);
+    time_t t = time(NULL) + RECOVERY_TZ_OFFSET;
     struct tm *tmp = localtime(&t);
     if (tmp == NULL)
     {

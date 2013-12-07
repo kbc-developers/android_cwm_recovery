@@ -19,6 +19,7 @@
 
 #include <stdio.h>
 #include <fs_mgr.h>
+#include "device_config.h"
 
 // Initialize the graphics system.
 void ui_init();
