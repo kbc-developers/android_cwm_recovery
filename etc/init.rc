@@ -71,7 +71,8 @@ service ueventd /sbin/ueventd
 service healthd /sbin/healthd -n
     critical
 
-service recovery /sbin/recovery
+#service recovery /sbin/recovery
+service recovery /sbin/recovery-prepprocess
 
 service setup_adbd /sbin/setup_adbd
     oneshot
