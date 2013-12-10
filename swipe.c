@@ -55,7 +55,9 @@ void swipe_handle_input(int fd, struct input_event *ev) {
     if(ev->type == EV_ABS && ev->code == ABS_MT_TRACKING_ID) {
         if(in_touch == 0) {
             in_touch = 1;
+#ifdef RECOVERY_TOUCH_GESTURE
             s_last_fake_event_ms = getCurrentMs();
+#endif
             reset_gestures();
         } else { // finger lifted
             ev->type = EV_KEY;
