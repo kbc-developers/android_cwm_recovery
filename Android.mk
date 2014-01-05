@@ -35,57 +35,58 @@ LOCAL_FORCE_STATIC_EXECUTABLE := true
 
 RECOVERY_FSTAB_VERSION := 2
 
-ifndef RECOVERY_NAME
+
+
 
 ifeq ($(TARGET_PRODUCT), cm_d2dcm)
-DEVICE_NAME := Galaxy S3
+RECOVERY_NAME := Galaxy S3
 LOCAL_CFLAGS += -DTARGET_DEVICE_SC06D
 
 else ifeq ($(TARGET_PRODUCT), cm_sc02c)
-DEVICE_NAME := Galaxy S2
+RECOVERY_NAME := Galaxy S2 CWM-based Recovery
 LOCAL_CFLAGS += -DTARGET_DEVICE_SC02C
 
 else ifeq ($(TARGET_PRODUCT), cm_quincydcm)
-DEVICE_NAME := Galaxy Note
+RECOVERY_NAME := Galaxy Note CWM-based Recovery
 LOCAL_CFLAGS += -DTARGET_DEVICE_SC05D
 
 else ifeq ($(TARGET_PRODUCT), cm_celoxdcm)
-DEVICE_NAME := Galaxy S2 LTE
+RECOVERY_NAME := Galaxy S2 LTE CWM-based Recovery
 LOCAL_CFLAGS += -DTARGET_DEVICE_SC03D
 
 else ifeq ($(TARGET_PRODUCT), cm_urushi)
-DEVICE_NAME := Xperia Ray
+RECOVERY_NAME := Xperia Ray CWM-based Recovery
 LOCAL_CFLAGS += -DTARGET_DEVICE_SO03C
 
 else ifeq ($(TARGET_PRODUCT), cm_valentewx)
-DEVICE_NAME := HTC J
+RECOVERY_NAME := HTC J CWM-based Recovery
 LOCAL_CFLAGS += -DTARGET_DEVICE_ISW13HT
 
 else ifeq ($(TARGET_PRODUCT), cm_sc02e)
-DEVICE_NAME := Galaxy Note2
+RECOVERY_NAME := Galaxy Note2 CWM-based Recovery
 LOCAL_CFLAGS += -DTARGET_DEVICE_SC02E
 
 else ifeq ($(TARGET_PRODUCT), cm_sc03e)
-DEVICE_NAME := Galaxy S3 alpha
+RECOVERY_NAME := Galaxy S3 alpha CWM-based Recovery
 LOCAL_CFLAGS += -DTARGET_DEVICE_SC03E
 
 else ifeq ($(TARGET_PRODUCT), cm_jfltedcm)
-DEVICE_NAME := Galaxy S4 dcm
+RECOVERY_NAME := Galaxy S4 CWM-based Recovery
 LOCAL_CFLAGS += -DTARGET_DEVICE_SC04E
 
 else ifeq ($(TARGET_PRODUCT), cm_quincytabdcm)
-DEVICE_NAME := Galaxy tab 7.7 plus
+RECOVERY_NAME := Galaxy tab 7.7 plus CWM-based Recovery
 LOCAL_CFLAGS += -DTARGET_DEVICE_SC01E
 
 else ifeq ($(TARGET_PRODUCT), cm_hltedcm)
-DEVICE_NAME := Galaxy Note3
+RECOVERY_NAME := Galaxy Note3 CWM-based Recovery
 LOCAL_CFLAGS += -DTARGET_DEVICE_SC01F
 else ifeq ($(TARGET_PRODUCT), cm_hltekdi)
-DEVICE_NAME := Galaxy Note3
+RECOVERY_NAME := Galaxy Note3 CWM-based Recovery
 LOCAL_CFLAGS += -DTARGET_DEVICE_SCL22
 endif
 
-
+ifndef RECOVERY_NAME
 
 ifdef I_AM_KOUSH
 RECOVERY_NAME := ClockworkMod Recovery
@@ -93,12 +94,10 @@ LOCAL_CFLAGS += -DI_AM_KOUSH
 else
 RECOVERY_NAME := CWM-based Recovery
 endif
-
-RECOVERY_NAME = $(DEVICE_NAME) $(RECOVERY_NAME)
 endif
 
-RECOVERY_VERSION := $(RECOVERY_NAME) v6.0.4.6
 
+RECOVERY_VERSION := $(RECOVERY_NAME) v6.0.4.6
 RECOVERY_KBC_REV := r0
 RECOVERY_VERSION += $(RECOVERY_KBC_REV)
 
