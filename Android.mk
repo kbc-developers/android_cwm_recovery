@@ -37,67 +37,68 @@ RECOVERY_FSTAB_VERSION := 2
 
 ifndef RECOVERY_NAME
 
-ifdef I_AM_KOUSH
-RECOVERY_NAME := ClockworkMod
-LOCAL_CFLAGS += -DI_AM_KOUSH
-else
-RECOVERY_NAME := CWM-based
-endif
-
 ifeq ($(TARGET_PRODUCT), cm_d2dcm)
-RECOVERY_NAME += Galaxy S3
+DEVICE_NAME := Galaxy S3
 LOCAL_CFLAGS += -DTARGET_DEVICE_SC06D
 
 else ifeq ($(TARGET_PRODUCT), cm_sc02c)
-RECOVERY_NAME += Galaxy S2
+DEVICE_NAME := Galaxy S2
 LOCAL_CFLAGS += -DTARGET_DEVICE_SC02C
 
 else ifeq ($(TARGET_PRODUCT), cm_quincydcm)
-RECOVERY_NAME += Galaxy Note
+DEVICE_NAME := Galaxy Note
 LOCAL_CFLAGS += -DTARGET_DEVICE_SC05D
 
 else ifeq ($(TARGET_PRODUCT), cm_celoxdcm)
-RECOVERY_NAME += Galaxy S2 LTE
+DEVICE_NAME := Galaxy S2 LTE
 LOCAL_CFLAGS += -DTARGET_DEVICE_SC03D
 
 else ifeq ($(TARGET_PRODUCT), cm_urushi)
-RECOVERY_NAME += Xperia Ray
+DEVICE_NAME := Xperia Ray
 LOCAL_CFLAGS += -DTARGET_DEVICE_SO03C
 
 else ifeq ($(TARGET_PRODUCT), cm_valentewx)
-RECOVERY_NAME += HTC J
+DEVICE_NAME := HTC J
 LOCAL_CFLAGS += -DTARGET_DEVICE_ISW13HT
 
 else ifeq ($(TARGET_PRODUCT), cm_sc02e)
-RECOVERY_NAME += Galaxy Note2
+DEVICE_NAME := Galaxy Note2
 LOCAL_CFLAGS += -DTARGET_DEVICE_SC02E
 
 else ifeq ($(TARGET_PRODUCT), cm_sc03e)
-RECOVERY_NAME += Galaxy S3 alpha
+DEVICE_NAME := Galaxy S3 alpha
 LOCAL_CFLAGS += -DTARGET_DEVICE_SC03E
 
 else ifeq ($(TARGET_PRODUCT), cm_jfltedcm)
-RECOVERY_NAME += Galaxy S4 dcm
+DEVICE_NAME := Galaxy S4 dcm
 LOCAL_CFLAGS += -DTARGET_DEVICE_SC04E
 
 else ifeq ($(TARGET_PRODUCT), cm_quincytabdcm)
-RECOVERY_NAME += Galaxy tab 7.7 plus
+DEVICE_NAME := Galaxy tab 7.7 plus
 LOCAL_CFLAGS += -DTARGET_DEVICE_SC01E
 
 else ifeq ($(TARGET_PRODUCT), cm_hltedcm)
-RECOVERY_NAME += Galaxy Note3dcm
+DEVICE_NAME := Galaxy Note3
 LOCAL_CFLAGS += -DTARGET_DEVICE_SC01F
 else ifeq ($(TARGET_PRODUCT), cm_hltekdi)
-RECOVERY_NAME += Galaxy Note3au
+DEVICE_NAME := Galaxy Note3
 LOCAL_CFLAGS += -DTARGET_DEVICE_SCL22
 endif
 
-RECOVERY_NAME += Recovery
 
+
+ifdef I_AM_KOUSH
+RECOVERY_NAME := ClockworkMod Recovery
+LOCAL_CFLAGS += -DI_AM_KOUSH
+else
+RECOVERY_NAME := CWM-based Recovery
 endif
 
+RECOVERY_NAME = $(DEVICE_NAME) $(RECOVERY_NAME)
+endif
 
 RECOVERY_VERSION := $(RECOVERY_NAME) v6.0.4.6
+
 RECOVERY_KBC_REV := r0
 RECOVERY_VERSION += $(RECOVERY_KBC_REV)
 
