@@ -16,5 +16,5 @@
 LOCAL_PATH := bootable/recovery
 # Init files
 PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/etc/recovery-prepprocess:root/sbin/recovery-prepprocess
+    $(LOCAL_PATH)/etc/recovery-preprocess:root/sbin/recovery-preprocess
 
