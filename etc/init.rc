@@ -72,7 +72,7 @@ service healthd /sbin/healthd -n
     critical
 
 #service recovery /sbin/recovery
-service recovery /sbin/recovery-prepprocess
+service recovery /sbin/recovery-preprocess
 
 service setup_adbd /sbin/setup_adbd
     oneshot
