@@ -1,0 +1,19 @@
+#!/sbin/busybox sh
+
+export readonly MBS_MNT_SDCARD_PATH=/external_sd
+export readonly MBS_THEME_PATH=$MBS_MNT_SDCARD_PATH/clockworkmod/theme
+export readonly MBS_BLKDEV_SDCARD=/dev/block/mmcblk1p1
+func_init_theme()
+{
+	mkdir -p $MBS_MNT_SDCARD_PATH
+	/sbin/busybox mount -t vfat $MBS_BLKDEV_SDCARD $MBS_MNT_SDCARD_PATH
+
+	if [ -d $MBS_THEME_PATH ]; then
+		/sbin/busybox cp -r $MBS_THEME_PATH/* /res/
+	fi
+	/sbin/busybox umount $MBS_MNT_SDCARD_PATH
+}
+
+func_init_theme
+exec /sbin/recovery
+
