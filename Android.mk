@@ -85,6 +85,10 @@ else ifeq ($(TARGET_PRODUCT), cm_hltekdi)
 RECOVERY_NAME := Galaxy Note3 CWM-based Recovery
 LOCAL_CFLAGS += -DTARGET_DEVICE_SCL22
 
+else ifeq ($(TARGET_PRODUCT), cm_LGL22)
+RECOVERY_NAME := LGL22 CWM-based Recovery
+LOCAL_CFLAGS += -DTARGET_DEVICE_LGL22
+
 endif
 
 ifdef I_AM_KOUSH
