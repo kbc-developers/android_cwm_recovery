@@ -214,7 +214,15 @@ int is_data_media_volume_path(const char* path) {
 }
 
 int ensure_path_mounted(const char* path) {
+
+#ifdef TARGET_DEVICE_LGL22
+    if (strcmp("/external_sd", path) == 0) 
+    {
+        return __system("mount /external_sd");
+    }
+#endif
     return ensure_path_mounted_at_mount_point(path, NULL);
+
 }
 
 int ensure_path_mounted_at_mount_point(const char* path, const char* mount_point) {
