@@ -84,7 +84,15 @@ RECOVERY_NAME := Galaxy Note3 CWM-based Recovery
 LOCAL_CFLAGS += -DTARGET_DEVICE_SCL22
 
 else ifeq ($(TARGET_PRODUCT), cm_lgl22)
-RECOVERY_NAME := LGL22 CWM-based Recovery
+RECOVERY_NAME := au isai CWM-based Recovery
+LOCAL_CFLAGS += -DTARGET_DEVICE_LGL22
+
+else ifeq ($(TARGET_PRODUCT), cm_lgl23)
+RECOVERY_NAME := G flex CWM-based Recovery
+LOCAL_CFLAGS += -DTARGET_DEVICE_LGL22
+
+else ifeq ($(TARGET_PRODUCT), cm_l01f)
+RECOVERY_NAME := G2 CWM-based Recovery
 LOCAL_CFLAGS += -DTARGET_DEVICE_LGL22
 
 endif
