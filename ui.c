@@ -283,15 +283,15 @@ typedef struct {
     unsigned char a;
 } UITextColor;
 
-UITextColor ui_normal_text_color =
+static UITextColor ui_normal_text_color =
 {
-	200, 200, 200, 255
+	MENU_TEXT_COLOR
 };
 
+#undef NORMAL_TEXT_COLOR
+#undef HEADER_TEXT_COLOR
 #define NORMAL_TEXT_COLOR ui_normal_text_color.r,ui_normal_text_color.g,ui_normal_text_color.b,ui_normal_text_color.a
 #define HEADER_TEXT_COLOR NORMAL_TEXT_COLOR
-
-static int menuTextColor[4] = {MENU_TEXT_COLOR};
 
 void ui_setMenuTextColor(int r, int g, int b, int a) {
     menuTextColor[0] = r;
