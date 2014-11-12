@@ -243,6 +243,9 @@ LOCAL_ADDITIONAL_DEPENDENCIES += \
 
 LOCAL_ADDITIONAL_DEPENDENCIES += $(RECOVERY_SYMLINKS) $(RECOVERY_BUSYBOX_SYMLINKS)
 
+#AOJP
+LOCAL_ADDITIONAL_DEPENDENCIES += recovery-preprocess
+
 include $(BUILD_EXECUTABLE)
 
 $(RECOVERY_SYMLINKS): RECOVERY_BINARY := $(LOCAL_MODULE)
@@ -266,14 +269,6 @@ LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE_CLASS := RECOVERY_EXECUTABLES
 LOCAL_MODULE_PATH := $(TARGET_RECOVERY_ROOT_OUT)/sbin
 LOCAL_SRC_FILES := killrecovery.sh
-include $(BUILD_PREBUILT)
-
-include $(CLEAR_VARS)
-LOCAL_MODULE := recovery-preprocess
-LOCAL_MODULE_TAGS := optional
-LOCAL_MODULE_CLASS := RECOVERY_EXECUTABLES
-LOCAL_MODULE_PATH := $(TARGET_RECOVERY_ROOT_OUT)/sbin
-LOCAL_SRC_FILES := recovery-preprocess
 include $(BUILD_PREBUILT)
 
 include $(CLEAR_VARS)
@@ -310,6 +305,7 @@ include $(commands_recovery_local_path)/utilities/Android.mk
 include $(commands_recovery_local_path)/su/Android.mk
 include $(commands_recovery_local_path)/voldclient/Android.mk
 include $(commands_recovery_local_path)/loki/Android.mk
+include $(commands_recovery_local_path)/etc/Android.mk
 commands_recovery_local_path :=
 
 endif

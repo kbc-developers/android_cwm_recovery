@@ -11,10 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+LOCAL_PATH := $(call my-dir)
 
-
-#LOCAL_PATH := bootable/recovery
-# Init files
-#PRODUCT_COPY_FILES += \
-#    $(LOCAL_PATH)/etc/recovery-preprocess:root/sbin/recovery-preprocess
+include $(CLEAR_VARS)
+LOCAL_MODULE := recovery-preprocess
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_CLASS := RECOVERY_EXECUTABLES
+LOCAL_MODULE_PATH := $(TARGET_RECOVERY_ROOT_OUT)/sbin
+LOCAL_SRC_FILES := recovery-preprocess
+include $(BUILD_PREBUILT)
 
