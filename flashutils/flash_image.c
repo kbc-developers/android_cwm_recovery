@@ -22,9 +22,11 @@
 #include <unistd.h>
 
 #include "cutils/log.h"
-#include "flashutils.h"
+#include "mtdutils.h"
 
-#if 0
+#ifdef LOG_TAG
+#undef LOG_TAG
+#endif
 #define LOG_TAG "flash_image"
 
 #define HEADER_SIZE 2048  // size of header to compare for equality
@@ -43,7 +45,7 @@ void die(const char *msg, ...) {
     }
 
     fprintf(stderr, "%s\n", buf);
-    LOGE("%s\n", buf);
+    ALOGE("%s\n", buf);
     exit(1);
 }
 
@@ -75,23 +77,23 @@ int main(int argc, char **argv) {
 
     MtdReadContext *in = mtd_read_partition(partition);
     if (in == NULL) {
-        LOGW("error opening %s: %s\n", argv[1], strerror(errno));
+        ALOGW("error opening %s: %s\n", argv[1], strerror(errno));
         // just assume it needs re-writing
     } else {
         char check[HEADER_SIZE];
         int checklen = mtd_read_data(in, check, sizeof(check));
         if (checklen <= 0) {
-            LOGW("error reading %s: %s\n", argv[1], strerror(errno));
+            ALOGW("error reading %s: %s\n", argv[1], strerror(errno));
             // just assume it needs re-writing
         } else if (checklen == headerlen && !memcmp(header, check, headerlen)) {
-            LOGI("header is the same, not flashing %s\n", argv[1]);
+            ALOGI("header is the same, not flashing %s\n", argv[1]);
             return 0;
         }
         mtd_read_close(in);
     }
 
     // Skip the header (we'll come back to it), write everything else
-    LOGI("flashing %s from %s\n", argv[1], argv[2]);
+    ALOGI("flashing %s from %s\n", argv[1], argv[2]);
 
     MtdWriteContext *out = mtd_write_partition(partition);
     if (out == NULL) die("error writing %s", argv[1]);
@@ -138,18 +140,4 @@ int main(int argc, char **argv) {
 
     if (mtd_write_close(out)) die("error closing %s", argv[1]);
     return 0;
-}
-#endif
-
-int main(int argc, char **argv)
-{
-    if (argc != 3) {
-        fprintf(stderr, "usage: %s partition file.img\n", argv[0]);
-        return 2;
-    }
-
-    int ret = restore_raw_partition(NULL, argv[1], argv[2]);
-    if (ret != 0)
-        fprintf(stderr, "failed with error: %d\n", ret);
-    return ret;
 }

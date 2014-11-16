@@ -27,7 +27,6 @@
 
 #include "sysdeps.h"
 #include "adb.h"
-#include "../common.h"
 
 #include <private/android_filesystem_config.h>
 
@@ -390,21 +389,10 @@ int adb_main()
     // The minimal version of adbd only uses USB.
     if (access(USB_ADB_PATH, F_OK) == 0 || access(USB_FFS_ADB_EP0, F_OK) == 0) {
         // listen on USB
-        LOGE("listen on USB\n");
         usb_init();
     }
 
-    if (setgid(AID_SHELL) != 0) {
-        LOGE("failed to setgid to shell\n");
-        exit(1);
-    }
-    if (setuid(AID_SHELL) != 0) {
-        LOGE("failed to setuid to shell\n");
-        exit(1);
-    }
-    LOGE("userid is %d\n", getuid());
-
-    LOGE("Event loop starting\n");
+    D("Event loop starting\n");
 
     fdevent_loop();
 

@@ -19,6 +19,10 @@
 
 #include "common.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // Load and parse volume data from /etc/recovery.fstab.
 void load_volume_table();
 
@@ -28,7 +32,6 @@ Volume* volume_for_path(const char* path);
 // Make sure that the volume 'path' is on is mounted.  Returns 0 on
 // success (volume is mounted).
 int ensure_path_mounted(const char* path);
-int ensure_path_mounted_at_mount_point(const char* path, const char* mount_point);
 
 // Make sure that the volume 'path' is on is mounted.  Returns 0 on
 // success (volume is unmounted);
@@ -39,21 +42,17 @@ int ensure_path_unmounted(const char* path);
 // it is mounted.
 int format_volume(const char* volume);
 
-char* get_primary_storage_path();
-char** get_extra_storage_paths();
-char* get_android_secure_path();
-void setup_legacy_storage_paths();
-int get_num_extra_volumes();
-int get_num_volumes();
+// Ensure that all and only the volumes that packages expect to find
+// mounted (/tmp and /cache) are mounted.  Returns 0 on success.
+int setup_install_mounts();
 
-Volume* get_device_volumes();
+// Conditionally wipes the /persistent partition if it's marked
+// to wipe. Returns -1 on failure, 1 if the partition was wiped
+// and 0 if the partition was not wiped.
+int erase_persistent_partition();
 
-int is_data_media();
-void setup_data_media();
-int is_data_media_volume_path(const char* path);
-void preserve_data_media(int val);
-int is_data_media_preserved();
-
-#define MAX_NUM_MANAGED_VOLUMES 10
+#ifdef __cplusplus
+}
+#endif
 
 #endif  // RECOVERY_ROOTS_H_

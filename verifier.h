@@ -17,17 +17,33 @@
 #ifndef _RECOVERY_VERIFIER_H
 #define _RECOVERY_VERIFIER_H
 
+#include "mincrypt/p256.h"
 #include "mincrypt/rsa.h"
 
-typedef struct Certificate {
+typedef struct {
+    p256_int x;
+    p256_int y;
+} ECPublicKey;
+
+typedef struct {
+    typedef enum {
+        RSA,
+        EC,
+    } KeyType;
+
     int hash_len;  // SHA_DIGEST_SIZE (SHA-1) or SHA256_DIGEST_SIZE (SHA-256)
-    RSAPublicKey* public_key;
+    KeyType key_type;
+    RSAPublicKey* rsa;
+    ECPublicKey* ec;
 } Certificate;
 
-/* Look in the file for a signature footer, and verify that it
- * matches one of the given keys.  Return one of the constants below.
+/* addr and length define a an update package file that has been
+ * loaded (or mmap'ed, or whatever) into memory.  Verify that the file
+ * is signed and the signature matches one of the given keys.  Return
+ * one of the constants below.
  */
-int verify_file(const char* path, const Certificate *pKeys, unsigned int numKeys);
+int verify_file(unsigned char* addr, size_t length,
+                const Certificate *pKeys, unsigned int numKeys);
 
 Certificate* load_keys(const char* filename, int* numKeys);
 

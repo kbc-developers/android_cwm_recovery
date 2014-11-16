@@ -48,13 +48,9 @@ int dirCreateHierarchy(const char *path, int mode,
  */
 int dirUnlinkHierarchy(const char *path);
 
-/* chown -R <uid>:<gid> <path>
- * chmod -R <mode> <path>
- *
- * Sets directories to <dirMode> and files to <fileMode>.  Skips symlinks.
- */
-int dirSetHierarchyPermissions(const char *path,
-         int uid, int gid, int dirMode, int fileMode);
+#ifdef __cplusplus
+}
+#endif
 
 #ifdef __cplusplus
 }

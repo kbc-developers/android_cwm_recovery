@@ -1,25 +1,14 @@
 LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
-LOCAL_SRC_FILES := events.c resources.c
-ifneq ($(BOARD_CUSTOM_GRAPHICS),)
-  LOCAL_SRC_FILES += $(BOARD_CUSTOM_GRAPHICS)
-else
-  LOCAL_SRC_FILES += graphics.c graphics_overlay.c
-endif
+LOCAL_SRC_FILES := graphics.c graphics_adf.c graphics_fbdev.c events.c \
+	resources.c
 
 LOCAL_C_INCLUDES +=\
     external/libpng\
     external/zlib
 
-ifeq ($(call is-vendor-board-platform,QCOM),true)
-  LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
-  LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
-endif
-
-ifeq ($(TARGET_USES_QCOM_BSP), true)
-    LOCAL_CFLAGS += -DMSM_BSP
-endif
+LOCAL_WHOLE_STATIC_LIBRARIES += libadf
 
 LOCAL_MODULE := libminui
 
@@ -40,12 +29,10 @@ else
   LOCAL_CFLAGS += -DOVERSCAN_PERCENT=0
 endif
 
-ifneq ($(BOARD_USE_CUSTOM_RECOVERY_FONT),)
-  LOCAL_CFLAGS += -DBOARD_USE_CUSTOM_RECOVERY_FONT=$(BOARD_USE_CUSTOM_RECOVERY_FONT)
-endif
-
-ifneq ($(TARGET_RECOVERY_LCD_BACKLIGHT_PATH),)
-  LOCAL_CFLAGS += -DRECOVERY_LCD_BACKLIGHT_PATH=$(TARGET_RECOVERY_LCD_BACKLIGHT_PATH)
-endif
-
 include $(BUILD_STATIC_LIBRARY)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE := libminui
+LOCAL_WHOLE_STATIC_LIBRARIES += libminui
+LOCAL_SHARED_LIBRARIES := libpng
+include $(BUILD_SHARED_LIBRARY)
