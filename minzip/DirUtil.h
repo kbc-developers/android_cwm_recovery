@@ -52,8 +52,4 @@ int dirUnlinkHierarchy(const char *path);
 }
 #endif
 
-#ifdef __cplusplus
-}
-#endif
-
 #endif  // MINZIP_DIRUTIL_H_

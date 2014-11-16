@@ -23,6 +23,13 @@
 
 #include "mounts.h"
 
+struct MountedVolume {
+    const char *device;
+    const char *mount_point;
+    const char *filesystem;
+    const char *flags;
+};
+
 typedef struct {
     MountedVolume *volumes;
     int volumes_allocd;
@@ -106,10 +113,10 @@ scan_mounted_volumes()
      */
     bufp = buf;
     while (nbytes > 0) {
-        char device[PATH_MAX];
-        char mount_point[PATH_MAX];
+        char device[64];
+        char mount_point[64];
         char filesystem[64];
-        char flags[256];
+        char flags[128];
         int matches;
 
         /* %as is a gnu extension that malloc()s a string for each field.
@@ -212,28 +219,4 @@ remount_read_only(const MountedVolume* volume)
     return mount(volume->device, volume->mount_point, volume->filesystem,
                  MS_NOATIME | MS_NODEV | MS_NODIRATIME |
                  MS_RDONLY | MS_REMOUNT, 0);
-}
-
-const MountedVolume *
-find_mounted_volume_by_real_node(const char *node)
-{
-    if (g_mounts_state.volumes != NULL) {
-        int i;
-        for (i = 0; i < g_mounts_state.volume_count; i++) {
-            MountedVolume *v = &g_mounts_state.volumes[i];
-            /* May be null if it was unmounted and we haven't rescanned.
-             */
-            if (v->device != NULL) {
-                ssize_t len;
-                char path_resolved[PATH_MAX];
-                if((len = readlink(v->device, path_resolved, sizeof(path_resolved)-1)) != -1)
-                    path_resolved[len] = '\0';
-
-                if (strcmp(path_resolved, node) == 0) {
-                    return v;
-                }
-            }
-        }
-    }
-    return NULL;
 }
