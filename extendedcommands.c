@@ -1811,40 +1811,50 @@ int verify_root_and_recovery() {
     }
 
     int exists = 0;
-    if (0 == lstat("/system/bin/su", &st)) {
-        exists = 1;
-        if (S_ISREG(st.st_mode)) {
-            if ((st.st_mode & (S_ISUID | S_ISGID)) != (S_ISUID | S_ISGID)) {
-                ui_show_text(1);
-                ret = 1;
-                if (confirm_selection("Root access possibly lost. Fix?", "Yes - Fix root (/system/bin/su)")) {
-                    __system("chmod 6755 /system/bin/su");
-                }
-            }
-        }
-    }
 
-    if (0 == lstat("/system/xbin/su", &st)) {
-        exists = 1;
-        if (S_ISREG(st.st_mode)) {
-            if ((st.st_mode & (S_ISUID | S_ISGID)) != (S_ISUID | S_ISGID)) {
-                ui_show_text(1);
-                ret = 1;
-                if (confirm_selection("Root access possibly lost. Fix?", "Yes - Fix root (/system/xbin/su)")) {
-                    __system("chmod 6755 /system/xbin/su");
-                }
-            }
-        }
+    if (0 == lstat("/system/etc/CHANGELOG-CM.txt", &st)) {
+		//SKIP_ROOT_FIX if installed Cyanogenmod based ROM 
     }
+    else
+    {
+		if (0 == lstat("/system/bin/su", &st)) {
+		    exists = 1;
+		    if (S_ISREG(st.st_mode)) {
+		        if ((st.st_mode & (S_ISUID | S_ISGID)) != (S_ISUID | S_ISGID)) {
+		            ui_show_text(1);
+		            ret = 1;
+		            if (confirm_selection("Root access possibly lost. Fix?", "Yes - Fix root (/system/bin/su)")) {
+		                __system("chmod 6755 /system/bin/su");
+		            }
+		        }
+		    }
+		}
 
-    if (!exists) {
-        ui_show_text(1);
-        ret = 1;
-        if (confirm_selection("Root access is missing. Root device?", "Yes - Root device (/system/xbin/su)")) {
-            __system("/sbin/install-su.sh");
-        }
-    }
 
+
+		if (0 == lstat("/system/xbin/su", &st)) {
+		    exists = 1;
+		    if (S_ISREG(st.st_mode)) {
+		        if ((st.st_mode & (S_ISUID | S_ISGID)) != (S_ISUID | S_ISGID)) {
+		            ui_show_text(1);
+		            ret = 1;
+		            if (confirm_selection("Root access possibly lost. Fix?", "Yes - Fix root (/system/xbin/su)")) {
+		                __system("chmod 6755 /system/xbin/su");
+		            }
+		        }
+		    }
+		}
+
+
+
+		if (!exists) {
+		    ui_show_text(1);
+		    ret = 1;
+		    if (confirm_selection("Root access is missing. Root device?", "Yes - Root device (/system/xbin/su)")) {
+		        __system("/sbin/install-su.sh");
+		    }
+		}
+	}
     ensure_path_unmounted("/system");
     return ret;
 }
