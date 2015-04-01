@@ -47,6 +47,7 @@
 #include "mtdutils/mtdutils.h"
 #include "updater.h"
 #include "install.h"
+#include "tune2fs.h"
 
 #include <dirent.h>
 
@@ -1559,11 +1560,6 @@ Value* RebootNowFn(const char* name, State* state, int argc, Expr* argv[]) {
     property_set(ANDROID_RB_PROPERTY, buffer);
 
     sleep(5);
-    // Attempt to reboot using older methods in case the recovery
-    // that we are updating does not support init reboots
-    android_reboot(ANDROID_RB_RESTART, 0, 0);
-
-    sleep(5);
     free(property);
     ErrorAbort(state, "%s() failed to reboot", name);
     return NULL;
@@ -1663,6 +1659,37 @@ Value* EnableRebootFn(const char* name, State* state, int argc, Expr* argv[]) {
     return StringValue(strdup("t"));
 }
 
+Value* Tune2FsFn(const char* name, State* state, int argc, Expr* argv[]) {
+    if (argc == 0) {
+        return ErrorAbort(state, "%s() expects args, got %d", name, argc);
+    }
+
+    char** args = ReadVarArgs(state, argc, argv);
+    if (args == NULL) {
+        return ErrorAbort(state, "%s() could not read args", name);
+    }
+
+    int i;
+    char** args2 = malloc(sizeof(char*) * (argc+1));
+    // Tune2fs expects the program name as its args[0]
+    args2[0] = strdup(name);
+    for (i = 0; i < argc; ++i) {
+       args2[i + 1] = args[i];
+    }
+    int result = tune2fs_main(argc + 1, args2);
+    for (i = 0; i < argc; ++i) {
+        free(args[i]);
+    }
+    free(args);
+
+    free(args2[0]);
+    free(args2);
+    if (result != 0) {
+        return ErrorAbort(state, "%s() returned error code %d", name, result);
+    }
+    return StringValue(strdup("t"));
+}
+
 void RegisterInstallFunctions() {
     RegisterFunction("mount", MountFn);
     RegisterFunction("is_mounted", IsMountedFn);
@@ -1713,6 +1740,7 @@ void RegisterInstallFunctions() {
     RegisterFunction("set_stage", SetStageFn);
 
     RegisterFunction("enable_reboot", EnableRebootFn);
+    RegisterFunction("tune2fs", Tune2FsFn);
 
     RegisterFunction("collect_backup_data", CollectBackupDataFn);
 }

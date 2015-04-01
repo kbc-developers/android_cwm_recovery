@@ -75,21 +75,6 @@ static bool outside(int x, int y)
     return x < 0 || x >= gr_draw->width || y < 0 || y >= gr_draw->height;
 }
 
-#if defined(RECOVERY_BGRA)
-static void rgba2bgra(unsigned char *p, int w)
-{
-    int x;
-    for (x = 0; x < w; ++x) {
-        char r, b;
-        r = *(p+0);
-        b = *(p+2);
-        *(p+0) = b;
-        *(p+2) = r;
-        p += 4;
-    }
-}
-#endif
-
 int gr_measure(const char *s)
 {
     return gr_font->cwidth * strlen(s);
@@ -127,9 +112,6 @@ static void icon_blend_alpha(unsigned char* src_p,int src_row_bytes,
              ++px;
              ++px;
         }
-#if defined(RECOVERY_BGRA)
-        rgba2bgra(dst_p, width);
-#endif
         src_p += src_row_bytes;
         dst_p += dst_row_bytes;
     }
@@ -138,11 +120,10 @@ static void text_blend(unsigned char* src_p, int src_row_bytes,
                        unsigned char* dst_p, int dst_row_bytes,
                        int width, int height)
 {
-    int i, j;
-    for (j = 0; j < height; ++j) {
+    for (int j = 0; j < height; ++j) {
         unsigned char* sx = src_p;
         unsigned char* px = dst_p;
-        for (i = 0; i < width; ++i) {
+        for (int i = 0; i < width; ++i) {
             unsigned char a = *sx++;
             if (gr_current_a < 255) a = ((int)a * gr_current_a) / 255;
             if (a == 255) {
@@ -162,9 +143,6 @@ static void text_blend(unsigned char* src_p, int src_row_bytes,
                 px += 4;
             }
         }
-#if defined(RECOVERY_BGRA)
-        rgba2bgra(dst_p, width);
-#endif
         src_p += src_row_bytes;
         dst_p += dst_row_bytes;
     }
@@ -185,31 +163,31 @@ void gr_text_blend(int x,int y, GRFont* font)
 
 void gr_text(int x, int y, const char *s, int bold)
 {
-    GRFont *font = gr_font;
-    unsigned off;
+    GRFont* font = gr_font;
 
-    if (!font->texture) return;
-    if (gr_current_a == 0) return;
+    if (!font->texture || gr_current_a == 0) return;
 
     bold = bold && (font->texture->height != font->cheight);
 
     x += overscan_offset_x;
     y += overscan_offset_y;
 
-    while((off = *s++)) {
-        off -= 32;
+    unsigned char ch;
+    while ((ch = *s++)) {
         if (outside(x, y) || outside(x+font->cwidth-1, y+font->cheight-1)) break;
-        if (off < 96) {
 
-            unsigned char* src_p = font->texture->data + (off * font->cwidth) +
-                (bold ? font->cheight * font->texture->row_bytes : 0);
-            unsigned char* dst_p = gr_draw->data + y*gr_draw->row_bytes + x*gr_draw->pixel_bytes;
-
-            text_blend(src_p, font->texture->row_bytes,
-                       dst_p, gr_draw->row_bytes,
-                       font->cwidth, font->cheight);
-
+        if (ch < ' ' || ch > '~') {
+            ch = '?';
         }
+
+        unsigned char* src_p = font->texture->data + ((ch - ' ') * font->cwidth) +
+                               (bold ? font->cheight * font->texture->row_bytes : 0);
+        unsigned char* dst_p = gr_draw->data + y*gr_draw->row_bytes + x*gr_draw->pixel_bytes;
+
+        text_blend(src_p, font->texture->row_bytes,
+                   dst_p, gr_draw->row_bytes,
+                   font->cwidth, font->cheight);
+
         x += font->cwidth;
     }
 }
@@ -237,30 +215,32 @@ void gr_texticon(int x, int y, GRSurface* icon) {
 
 void gr_color(unsigned char r, unsigned char g, unsigned char b, unsigned char a)
 {
+#if defined(RECOVERY_ABGR) || defined(RECOVERY_BGRA)
+    gr_current_r = b;
+    gr_current_g = g;
+    gr_current_b = r;
+    gr_current_a = a;
+#else
     gr_current_r = r;
     gr_current_g = g;
     gr_current_b = b;
     gr_current_a = a;
+#endif
 }
 
 void gr_clear()
 {
-    if (gr_current_r == gr_current_g &&
-        gr_current_r == gr_current_b) {
+    if (gr_current_r == gr_current_g && gr_current_r == gr_current_b) {
         memset(gr_draw->data, gr_current_r, gr_draw->height * gr_draw->row_bytes);
     } else {
-        int x, y;
         unsigned char* px = gr_draw->data;
-        for (y = 0; y < gr_draw->height; ++y) {
-            for (x = 0; x < gr_draw->width; ++x) {
+        for (int y = 0; y < gr_draw->height; ++y) {
+            for (int x = 0; x < gr_draw->width; ++x) {
                 *px++ = gr_current_r;
                 *px++ = gr_current_g;
                 *px++ = gr_current_b;
                 px++;
             }
-#if defined(RECOVERY_BGRA)
-            rgba2bgra(px - gr_draw->width * 4, gr_draw->width);
-#endif
             px += gr_draw->row_bytes - (gr_draw->width * gr_draw->pixel_bytes);
         }
     }
@@ -287,9 +267,6 @@ void gr_fill(int x1, int y1, int x2, int y2)
                 *px++ = gr_current_b;
                 px++;
             }
-#if defined(RECOVERY_BGRA)
-            rgba2bgra(p, x2-x1);
-#endif
             p += gr_draw->row_bytes;
         }
     } else if (gr_current_a > 0) {
@@ -305,9 +282,6 @@ void gr_fill(int x1, int y1, int x2, int y2)
                 ++px;
                 ++px;
             }
-#if defined(RECOVERY_BGRA)
-            rgba2bgra(p, x2-x1);
-#endif
             p += gr_draw->row_bytes;
         }
     }
@@ -325,6 +299,29 @@ void gr_set_font(const char* name)
 }
 
 void gr_blit(GRSurface* source, int sx, int sy, int w, int h, int dx, int dy) {
+    if (source == NULL) return;
+
+    if (gr_draw->pixel_bytes != source->pixel_bytes) {
+        printf("gr_blit: source has wrong format\n");
+        return;
+    }
+
+    dx += overscan_offset_x;
+    dy += overscan_offset_y;
+
+    if (outside(dx, dy) || outside(dx+w-1, dy+h-1)) return;
+
+    unsigned char* src_p = source->data + sy*source->row_bytes + sx*source->pixel_bytes;
+    unsigned char* dst_p = gr_draw->data + dy*gr_draw->row_bytes + dx*gr_draw->pixel_bytes;
+
+    for (int i = 0; i < h; ++i) {
+        memcpy(dst_p, src_p, w * source->pixel_bytes);
+        src_p += source->row_bytes;
+        dst_p += gr_draw->row_bytes;
+    }
+}
+
+void gr_blend(GRSurface* source, int sx, int sy, int w, int h, int dx, int dy) {
     if (source == NULL) return;
 
     if (gr_draw->pixel_bytes != source->pixel_bytes) {
