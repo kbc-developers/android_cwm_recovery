@@ -31,6 +31,8 @@
 #include <time.h>
 #include <unistd.h>
 
+#include <chrono>
+
 #include <base/file.h>
 #include <base/stringprintf.h>
 
@@ -49,6 +51,10 @@
 #include "adb.h"
 #include "fuse_sideload.h"
 #include "fuse_sdcard_provider.h"
+
+extern "C" {
+#include "recovery_cmds.h"
+}
 
 struct selabel_handle *sehandle;
 
@@ -151,8 +157,7 @@ static const int MAX_ARG_LENGTH = 4096;
 static const int MAX_ARGS = 100;
 
 // open a given path, mounting partitions as necessary
-FILE*
-fopen_path(const char *path, const char *mode) {
+FILE* fopen_path(const char *path, const char *mode) {
     if (ensure_path_mounted(path) != 0) {
         LOGE("Can't mount %s\n", path);
         return NULL;
@@ -166,23 +171,102 @@ fopen_path(const char *path, const char *mode) {
     return fp;
 }
 
+// close a file, log an error if the error indicator is set
+static void check_and_fclose(FILE *fp, const char *name) {
+    fflush(fp);
+    if (ferror(fp)) LOGE("Error in %s\n(%s)\n", name, strerror(errno));
+    fclose(fp);
+}
+
 bool is_ro_debuggable() {
     char value[PROPERTY_VALUE_MAX+1];
     return (property_get("ro.debuggable", value, NULL) == 1 && value[0] == '1');
 }
 
 static void redirect_stdio(const char* filename) {
-    // If these fail, there's not really anywhere to complain...
-    freopen(filename, "a", stdout); setbuf(stdout, NULL);
-    freopen(filename, "a", stderr); setbuf(stderr, NULL);
-}
+    int pipefd[2];
+    if (pipe(pipefd) == -1) {
+        LOGE("pipe failed: %s\n", strerror(errno));
 
-// close a file, log an error if the error indicator is set
-static void
-check_and_fclose(FILE *fp, const char *name) {
-    fflush(fp);
-    if (ferror(fp)) LOGE("Error in %s\n(%s)\n", name, strerror(errno));
-    fclose(fp);
+        // Fall back to traditional logging mode without timestamps.
+        // If these fail, there's not really anywhere to complain...
+        freopen(filename, "a", stdout); setbuf(stdout, NULL);
+        freopen(filename, "a", stderr); setbuf(stderr, NULL);
+
+        return;
+    }
+
+    pid_t pid = fork();
+    if (pid == -1) {
+        LOGE("fork failed: %s\n", strerror(errno));
+
+        // Fall back to traditional logging mode without timestamps.
+        // If these fail, there's not really anywhere to complain...
+        freopen(filename, "a", stdout); setbuf(stdout, NULL);
+        freopen(filename, "a", stderr); setbuf(stderr, NULL);
+
+        return;
+    }
+
+    if (pid == 0) {
+        /// Close the unused write end.
+        close(pipefd[1]);
+
+        auto start = std::chrono::steady_clock::now();
+
+        // Child logger to actually write to the log file.
+        FILE* log_fp = fopen(filename, "a");
+        if (log_fp == nullptr) {
+            LOGE("fopen \"%s\" failed: %s\n", filename, strerror(errno));
+            close(pipefd[0]);
+            _exit(1);
+        }
+
+        FILE* pipe_fp = fdopen(pipefd[0], "r");
+        if (pipe_fp == nullptr) {
+            LOGE("fdopen failed: %s\n", strerror(errno));
+            check_and_fclose(log_fp, filename);
+            close(pipefd[0]);
+            _exit(1);
+        }
+
+        char* line = nullptr;
+        size_t len = 0;
+        while (getline(&line, &len, pipe_fp) != -1) {
+            auto now = std::chrono::steady_clock::now();
+            double duration = std::chrono::duration_cast<std::chrono::duration<double>>(
+                    now - start).count();
+            if (line[0] == '\n') {
+                fprintf(log_fp, "[%12.6lf]\n", duration);
+            } else {
+                fprintf(log_fp, "[%12.6lf] %s", duration, line);
+            }
+            fflush(log_fp);
+        }
+
+        LOGE("getline failed: %s\n", strerror(errno));
+
+        free(line);
+        check_and_fclose(log_fp, filename);
+        close(pipefd[0]);
+        _exit(1);
+    } else {
+        // Redirect stdout/stderr to the logger process.
+        // Close the unused read end.
+        close(pipefd[0]);
+
+        setbuf(stdout, nullptr);
+        setbuf(stderr, nullptr);
+
+        if (dup2(pipefd[1], STDOUT_FILENO) == -1) {
+            LOGE("dup2 stdout failed: %s\n", strerror(errno));
+        }
+        if (dup2(pipefd[1], STDERR_FILENO) == -1) {
+            LOGE("dup2 stderr failed: %s\n", strerror(errno));
+        }
+
+        close(pipefd[1]);
+    }
 }
 
 // command line args come from, in decreasing precedence:
@@ -326,14 +410,18 @@ static void rotate_logs(int max) {
     ensure_path_mounted(LAST_KMSG_FILE);
 
     for (int i = max-1; i >= 0; --i) {
-        std::string old_log = android::base::StringPrintf((i == 0) ? "%s" : "%s.%d",
-                LAST_LOG_FILE, i);
+        std::string old_log = android::base::StringPrintf("%s", LAST_LOG_FILE);
+        if (i > 0) {
+          old_log += "." + std::to_string(i);
+        }
         std::string new_log = android::base::StringPrintf("%s.%d", LAST_LOG_FILE, i+1);
         // Ignore errors if old_log doesn't exist.
         rename(old_log.c_str(), new_log.c_str());
 
-        std::string old_kmsg = android::base::StringPrintf((i == 0) ? "%s" : "%s.%d",
-                LAST_KMSG_FILE, i);
+        std::string old_kmsg = android::base::StringPrintf("%s", LAST_KMSG_FILE);
+        if (i > 0) {
+          old_kmsg += "." + std::to_string(i);
+        }
         std::string new_kmsg = android::base::StringPrintf("%s.%d", LAST_KMSG_FILE, i+1);
         rename(old_kmsg.c_str(), new_kmsg.c_str());
     }
@@ -512,7 +600,7 @@ get_menu_selection(const char* const * headers, const char* const * items,
     int selected = initial_selection;
     int chosen_item = -1;
 
-    while (chosen_item < 0) {
+    while (chosen_item < 0 && chosen_item != Device::kGoBack && chosen_item != Device::kRefresh) {
         int key = ui->WaitKey();
         int visible = ui->IsTextVisible();
 
@@ -524,6 +612,11 @@ get_menu_selection(const char* const * headers, const char* const * items,
                 ui->EndMenu();
                 return 0; // XXX fixme
             }
+        } else if (key == -2) { // we are returning from ui_cancel_wait_key(): no action
+            return Device::kNoAction;
+        }
+        else if (key == -6) {
+            return Device::kRefresh;
         }
 
         int action = device->HandleMenuKey(key, visible);
@@ -540,6 +633,12 @@ get_menu_selection(const char* const * headers, const char* const * items,
                     chosen_item = selected;
                     break;
                 case Device::kNoAction:
+                    break;
+                case Device::kGoBack:
+                    chosen_item = Device::kGoBack;
+                    break;
+                case Device::kRefresh:
+                    chosen_item = Device::kRefresh;
                     break;
             }
         } else if (!menu_only) {
@@ -706,7 +805,10 @@ static void choose_recovery_file(Device* device) {
     // Add LAST_KMSG_FILE + LAST_KMSG_FILE.x
     for (int i = 0; i < KEEP_LOG_COUNT; i++) {
         char* log_file;
-        if (asprintf(&log_file, (i == 0) ? "%s" : "%s.%d", LAST_LOG_FILE, i) == -1) {
+        int ret;
+        ret = (i == 0) ? asprintf(&log_file, "%s", LAST_LOG_FILE) :
+                asprintf(&log_file, "%s.%d", LAST_LOG_FILE, i);
+        if (ret == -1) {
             // memory allocation failure - return early. Should never happen.
             return;
         }
@@ -717,7 +819,9 @@ static void choose_recovery_file(Device* device) {
         }
 
         char* kmsg_file;
-        if (asprintf(&kmsg_file, (i == 0) ? "%s" : "%s.%d", LAST_KMSG_FILE, i) == -1) {
+        ret = (i == 0) ? asprintf(&kmsg_file, "%s", LAST_KMSG_FILE) :
+                asprintf(&kmsg_file, "%s.%d", LAST_KMSG_FILE, i);
+        if (ret == -1) {
             // memory allocation failure - return early. Should never happen.
             return;
         }
@@ -736,15 +840,44 @@ static void choose_recovery_file(Device* device) {
         int chosen_item = get_menu_selection(headers, entries, 1, 0, device);
         if (strcmp(entries[chosen_item], "Back") == 0) break;
 
-        // TODO: do we need to redirect? ShowFile could just avoid writing to stdio.
-        redirect_stdio("/dev/null");
         ui->ShowFile(entries[chosen_item]);
-        redirect_stdio(TEMPORARY_LOG_FILE);
     }
 
     for (size_t i = 0; i < (sizeof(entries) / sizeof(*entries)); i++) {
         free(entries[i]);
     }
+}
+
+static int enter_sideload_mode(RecoveryUI *ui_, bool* wipe_cache, Device* device) {
+
+    ensure_path_mounted(CACHE_ROOT);
+    start_sideload(ui_, wipe_cache, TEMPORARY_INSTALL_FILE);
+
+    static const char* headers[] = {  "ADB Sideload",
+                                "",
+                                NULL
+    };
+
+    static const char* list[] = { "Cancel sideload", NULL };
+
+    int status = INSTALL_NONE;
+    int item = get_menu_selection(headers, list, 0, 0, device);
+    if (item != Device::kNoAction) {
+        stop_sideload();
+    }
+    status = wait_sideload();
+
+    if (status >= 0 && status != INSTALL_NONE) {
+        if (status != INSTALL_SUCCESS) {
+            ui_->SetBackground(RecoveryUI::ERROR);
+            ui_->Print("Installation aborted.\n");
+        } else if (!ui->IsTextVisible()) {
+            return status;  // reboot if logs aren't visible
+        } else {
+            ui_->Print("\nInstall from ADB complete.\n");
+        }
+    }
+    return status;
 }
 
 static int apply_from_sdcard(Device* device, bool* wipe_cache) {
@@ -758,6 +891,7 @@ static int apply_from_sdcard(Device* device, bool* wipe_cache) {
     char* path = browse_directory(SDCARD_ROOT, device);
     if (path == NULL) {
         ui->Print("\n-- No package file selected.\n");
+        ensure_path_unmounted(SDCARD_ROOT);
         return INSTALL_ERROR;
     }
 
@@ -801,62 +935,83 @@ prompt_and_wait(Device* device, int status) {
         Device::BuiltinAction chosen_action = device->InvokeMenuItem(chosen_item);
 
         bool should_wipe_cache = false;
-        switch (chosen_action) {
-            case Device::NO_ACTION:
-                break;
+        for (;;) {
+            switch (chosen_action) {
+                case Device::NO_ACTION:
+                    break;
 
-            case Device::REBOOT:
-            case Device::SHUTDOWN:
-            case Device::REBOOT_BOOTLOADER:
-                return chosen_action;
+                case Device::REBOOT:
+                case Device::SHUTDOWN:
+                case Device::REBOOT_BOOTLOADER:
+                    return chosen_action;
 
-            case Device::WIPE_DATA:
-                wipe_data(ui->IsTextVisible(), device);
-                if (!ui->IsTextVisible()) return Device::NO_ACTION;
-                break;
+                case Device::WIPE_DATA:
+                    wipe_data(ui->IsTextVisible(), device);
+                    if (!ui->IsTextVisible()) return Device::NO_ACTION;
+                    break;
 
-            case Device::WIPE_CACHE:
-                wipe_cache(ui->IsTextVisible(), device);
-                if (!ui->IsTextVisible()) return Device::NO_ACTION;
-                break;
+                case Device::WIPE_CACHE:
+                    wipe_cache(ui->IsTextVisible(), device);
+                    if (!ui->IsTextVisible()) return Device::NO_ACTION;
+                    break;
 
-            case Device::APPLY_ADB_SIDELOAD:
-            case Device::APPLY_SDCARD:
-                {
-                    bool adb = (chosen_action == Device::APPLY_ADB_SIDELOAD);
-                    if (adb) {
-                        status = apply_from_adb(ui, &should_wipe_cache, TEMPORARY_INSTALL_FILE);
-                    } else {
-                        status = apply_from_sdcard(device, &should_wipe_cache);
-                    }
+                case Device::APPLY_ADB_SIDELOAD:
+                case Device::APPLY_SDCARD:
+                    {
+                        bool adb = (chosen_action == Device::APPLY_ADB_SIDELOAD);
+                        if (adb) {
+                            status = enter_sideload_mode(ui, &should_wipe_cache, device);
+                        } else {
+                            status = apply_from_sdcard(device, &should_wipe_cache);
+                        }
 
-                    if (status == INSTALL_SUCCESS && should_wipe_cache) {
-                        if (!wipe_cache(false, device)) {
-                            status = INSTALL_ERROR;
+                        if (status == INSTALL_SUCCESS && should_wipe_cache) {
+                            if (!wipe_cache(false, device)) {
+                                status = INSTALL_ERROR;
+                            }
+                        }
+
+                        if (status != INSTALL_SUCCESS) {
+                            ui->SetBackground(RecoveryUI::ERROR);
+                            ui->Print("Installation aborted.\n");
+                            copy_logs();
+                        } else if (!ui->IsTextVisible()) {
+                            return Device::NO_ACTION;  // reboot if logs aren't visible
+                        } else {
+                            ui->Print("\nInstall from %s complete.\n", adb ? "ADB" : "SD card");
                         }
                     }
+                    break;
 
-                    if (status != INSTALL_SUCCESS) {
-                        ui->SetBackground(RecoveryUI::ERROR);
-                        ui->Print("Installation aborted.\n");
-                        copy_logs();
-                    } else if (!ui->IsTextVisible()) {
-                        return Device::NO_ACTION;  // reboot if logs aren't visible
+                case Device::VIEW_RECOVERY_LOGS:
+                    choose_recovery_file(device);
+                    break;
+
+                case Device::MOUNT_SYSTEM:
+                    char system_root_image[PROPERTY_VALUE_MAX];
+                    property_get("ro.build.system_root_image", system_root_image, "");
+
+                    // For a system image built with the root directory (i.e.
+                    // system_root_image == "true"), we mount it to /system_root, and symlink /system
+                    // to /system_root/system to make adb shell work (the symlink is created through
+                    // the build system).
+                    // Bug: 22855115
+                    if (strcmp(system_root_image, "true") == 0) {
+                        if (ensure_path_mounted_at("/", "/system_root") != -1) {
+                            ui->Print("Mounted /system.\n");
+                        }
                     } else {
-                        ui->Print("\nInstall from %s complete.\n", adb ? "ADB" : "SD card");
+                        if (ensure_path_mounted("/system") != -1) {
+                            ui->Print("Mounted /system.\n");
+                        }
                     }
-                }
-                break;
-
-            case Device::VIEW_RECOVERY_LOGS:
-                choose_recovery_file(device);
-                break;
-
-            case Device::MOUNT_SYSTEM:
-                if (ensure_path_mounted("/system") != -1) {
-                    ui->Print("Mounted /system.\n");
-                }
-                break;
+                    break;
+            }
+            if (status == Device::kRefresh) {
+                status = 0;
+                continue;
+            }
+            break;
         }
     }
 }
@@ -885,6 +1040,40 @@ load_locale_from_cache() {
     }
 }
 
+static const char *key_src = "/data/misc/adb/adb_keys";
+static const char *key_dest = "/adb_keys";
+
+
+static void
+setup_adbd() {
+    struct stat f;
+    // Mount /data and copy adb_keys to root if it exists
+    ensure_path_mounted("/data");
+    if (stat(key_src, &f) == 0) {
+        FILE *file_src = fopen(key_src, "r");
+        if (file_src == NULL) {
+            LOGE("Can't open %s\n", key_src);
+        } else {
+            FILE *file_dest = fopen(key_dest, "w");
+            if (file_dest == NULL) {
+                LOGE("Can't open %s\n", key_dest);
+            } else {
+                char buf[4096];
+                while (fgets(buf, sizeof(buf), file_src)) fputs(buf, file_dest);
+                check_and_fclose(file_dest, key_dest);
+
+                // Enable secure adbd
+                property_set("ro.adb.secure", "1");
+            }
+            check_and_fclose(file_src, key_src);
+        }
+    }
+    ensure_path_unmounted("/data");
+
+    // Trigger (re)start of adb daemon
+    property_set("service.adb.root", "1");
+}
+
 static RecoveryUI* gCurrentUI = NULL;
 
 void
@@ -903,12 +1092,10 @@ ui_print(const char* format, ...) {
     }
 }
 
+extern "C" int toybox_driver(int argc, char **argv);
+
 int
 main(int argc, char **argv) {
-    time_t start = time(NULL);
-
-    redirect_stdio(TEMPORARY_LOG_FILE);
-
     // If this binary is started with the single argument "--adbd",
     // instead of being the normal recovery binary, it turns into kind
     // of a stripped-down version of adbd that only supports the
@@ -920,6 +1107,43 @@ main(int argc, char **argv) {
         adb_main(0, DEFAULT_ADB_PORT);
         return 0;
     }
+
+    // Handle alternative invocations
+    char* command = argv[0];
+    char* stripped = strrchr(argv[0], '/');
+    if (stripped)
+        command = stripped + 1;
+
+    if (strcmp(command, "recovery") != 0) {
+        struct recovery_cmd cmd = get_command(command);
+        if (cmd.name)
+            return cmd.main_func(argc, argv);
+
+        if (!strcmp(command, "setup_adbd")) {
+            load_volume_table();
+            setup_adbd();
+            return 0;
+        }
+        if (strstr(argv[0], "start")) {
+            property_set("ctl.start", argv[1]);
+            return 0;
+        }
+        if (strstr(argv[0], "stop")) {
+            property_set("ctl.stop", argv[1]);
+            return 0;
+        }
+        return toybox_driver(argc, argv);
+    }
+
+    // Clear umask for packages that copy files out to /tmp and then over
+    // to /system without properly setting all permissions (eg. gapps).
+    umask(0);
+
+    time_t start = time(NULL);
+
+    // redirect_stdio should be called only in non-sideload mode. Otherwise
+    // we may have two logger instances with different timestamps.
+    redirect_stdio(TEMPORARY_LOG_FILE);
 
     printf("Starting recovery (pid %d) on %s", getpid(), ctime(&start));
 
@@ -1011,11 +1235,15 @@ main(int argc, char **argv) {
         if (strncmp(update_package, "CACHE:", 6) == 0) {
             int len = strlen(update_package) + 10;
             char* modified_path = (char*)malloc(len);
-            strlcpy(modified_path, "/cache/", len);
-            strlcat(modified_path, update_package+6, len);
-            printf("(replacing path \"%s\" with \"%s\")\n",
-                   update_package, modified_path);
-            update_package = modified_path;
+            if (modified_path) {
+                strlcpy(modified_path, "/cache/", len);
+                strlcat(modified_path, update_package+6, len);
+                printf("(replacing path \"%s\" with \"%s\")\n",
+                       update_package, modified_path);
+                update_package = modified_path;
+            }
+            else
+                printf("modified_path allocation failed\n");
         }
     }
     printf("\n");
@@ -1060,7 +1288,7 @@ main(int argc, char **argv) {
         if (!sideload_auto_reboot) {
             ui->ShowText(true);
         }
-        status = apply_from_adb(ui, &should_wipe_cache, TEMPORARY_INSTALL_FILE);
+        status = enter_sideload_mode(ui, &should_wipe_cache, device);
         if (status == INSTALL_SUCCESS && should_wipe_cache) {
             if (!wipe_cache(false, device)) {
                 status = INSTALL_ERROR;

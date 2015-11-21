@@ -61,30 +61,91 @@ typedef struct {
     int pos[0];
 } RangeSet;
 
+#define RANGESET_MAX_POINTS \
+    ((int)((INT_MAX / sizeof(int)) - sizeof(RangeSet)))
+
 static RangeSet* parse_range(char* text) {
     char* save;
-    int num;
-    num = strtol(strtok_r(text, ",", &save), NULL, 0);
+    char* token;
+    int i, num;
+    long int val;
+    RangeSet* out = NULL;
+    size_t bufsize;
 
-    RangeSet* out = malloc(sizeof(RangeSet) + num * sizeof(int));
-    if (out == NULL) {
-        fprintf(stderr, "failed to allocate range of %zu bytes\n",
-                sizeof(RangeSet) + num * sizeof(int));
-        exit(1);
+    if (!text) {
+        goto err;
     }
+
+    token = strtok_r(text, ",", &save);
+
+    if (!token) {
+        goto err;
+    }
+
+    val = strtol(token, NULL, 0);
+
+    if (val < 2 || val > RANGESET_MAX_POINTS) {
+        goto err;
+    } else if (val % 2) {
+        goto err; // must be even
+    }
+
+    num = (int) val;
+    bufsize = sizeof(RangeSet) + num * sizeof(int);
+
+    out = malloc(bufsize);
+
+    if (!out) {
+        fprintf(stderr, "failed to allocate range of %zu bytes\n", bufsize);
+        goto err;
+    }
+
     out->count = num / 2;
     out->size = 0;
-    int i;
+
     for (i = 0; i < num; ++i) {
-        out->pos[i] = strtol(strtok_r(NULL, ",", &save), NULL, 0);
-        if (i%2) {
+        token = strtok_r(NULL, ",", &save);
+
+        if (!token) {
+            goto err;
+        }
+
+        val = strtol(token, NULL, 0);
+
+        if (val < 0 || val > INT_MAX) {
+            goto err;
+        }
+
+        out->pos[i] = (int) val;
+
+        if (i % 2) {
+            if (out->pos[i - 1] >= out->pos[i]) {
+                goto err; // empty or negative range
+            }
+
+            if (out->size > INT_MAX - out->pos[i]) {
+                goto err; // overflow
+            }
+
             out->size += out->pos[i];
         } else {
+            if (out->size < 0) {
+                goto err;
+            }
+
             out->size -= out->pos[i];
         }
     }
 
+    if (out->size <= 0) {
+        goto err;
+    }
+
     return out;
+
+err:
+    fprintf(stderr, "failed to parse range '%s'\n", text ? text : "NULL");
+    exit(1);
 }
 
 static int range_overlaps(RangeSet* r1, RangeSet* r2) {
@@ -133,11 +194,6 @@ static int write_all(int fd, const uint8_t* data, size_t size) {
             return -1;
         }
         written += w;
-    }
-
-    if (fsync(fd) == -1) {
-        fprintf(stderr, "fsync failed: %s\n", strerror(errno));
-        return -1;
     }
 
     return 0;
@@ -671,7 +727,7 @@ static int WriteStash(const char* base, const char* id, int blocks, uint8_t* buf
 
     fprintf(stderr, " writing %d blocks to %s\n", blocks, cn);
 
-    fd = TEMP_FAILURE_RETRY(open(fn, O_WRONLY | O_CREAT | O_TRUNC | O_SYNC, STASH_FILE_MODE));
+    fd = TEMP_FAILURE_RETRY(open(fn, O_WRONLY | O_CREAT | O_TRUNC, STASH_FILE_MODE));
 
     if (fd == -1) {
         fprintf(stderr, "failed to create \"%s\": %s\n", fn, strerror(errno));
@@ -1726,6 +1782,10 @@ static Value* PerformBlockImageUpdate(const char* name, State* state, int argc, 
         }
 
         if (params.canwrite) {
+            if (fsync(params.fd) == -1) {
+                fprintf(stderr, "fsync failed: %s\n", strerror(errno));
+                goto pbiudone;
+            }
             fprintf(cmd_pipe, "set_progress %.4f\n", (double) params.written / total_blocks);
             fflush(cmd_pipe);
         }

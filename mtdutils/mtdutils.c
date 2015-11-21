@@ -28,6 +28,9 @@
 
 #include "mtdutils.h"
 
+static const char mtdprefix[] = "/dev/block/mtd/by-name/";
+#define MTD_BASENAME_OFFSET (sizeof(mtdprefix)-1+1)
+
 struct MtdPartition {
     int device_index;
     unsigned int size;
@@ -144,7 +147,7 @@ mtd_scan_partitions()
             p->device_index = mtdnum;
             p->size = mtdsize;
             p->erase_size = mtderasesize;
-            p->name = strdup(mtdname);
+            asprintf(&p->name, "%s%s", mtdprefix, mtdname);
             if (p->name == NULL) {
                 errno = ENOMEM;
                 goto bail;
@@ -181,6 +184,9 @@ mtd_find_partition_by_name(const char *name)
             MtdPartition *p = &g_mtd_state.partitions[i];
             if (p->device_index >= 0 && p->name != NULL) {
                 if (strcmp(p->name, name) == 0) {
+                    return p;
+                }
+                if (strcmp(p->name+MTD_BASENAME_OFFSET, name) == 0) {
                     return p;
                 }
             }
@@ -300,20 +306,20 @@ static int read_block(const MtdPartition *partition, int fd, char *data)
         if (TEMP_FAILURE_RETRY(lseek64(fd, pos, SEEK_SET)) != pos ||
                     TEMP_FAILURE_RETRY(read(fd, data, size)) != size) {
             printf("mtd: read error at 0x%08llx (%s)\n",
-                    pos, strerror(errno));
+                   (long long)pos, strerror(errno));
         } else if (ioctl(fd, ECCGETSTATS, &after)) {
             printf("mtd: ECCGETSTATS error (%s)\n", strerror(errno));
             return -1;
         } else if (after.failed != before.failed) {
             printf("mtd: ECC errors (%d soft, %d hard) at 0x%08llx\n",
-                    after.corrected - before.corrected,
-                    after.failed - before.failed, pos);
+                   after.corrected - before.corrected,
+                   after.failed - before.failed, (long long)pos);
             // copy the comparison baseline for the next read.
             memcpy(&before, &after, sizeof(struct mtd_ecc_stats));
         } else if ((mgbb = ioctl(fd, MEMGETBADBLOCK, &pos))) {
             fprintf(stderr,
                     "mtd: MEMGETBADBLOCK returned %d at 0x%08llx: %s\n",
-                    mgbb, pos, strerror(errno));
+                    mgbb, (long long)pos, strerror(errno));
         } else {
             return 0;  // Success!
         }

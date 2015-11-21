@@ -30,8 +30,10 @@
 
 #include <vector>
 
-#include "base/strings.h"
-#include "cutils/properties.h"
+#include <base/strings.h>
+#include <base/stringprintf.h>
+#include <cutils/properties.h>
+
 #include "common.h"
 #include "device.h"
 #include "minui/minui.h"
@@ -74,7 +76,9 @@ ScreenRecoveryUI::ScreenRecoveryUI() :
     animation_fps(20),
     installing_frames(-1),
     stage(-1),
-    max_stage(-1) {
+    max_stage(-1),
+    rainbow(false),
+    wrap_count(0) {
 
     for (int i = 0; i < 5; i++) {
         backgroundIcon[i] = nullptr;
@@ -319,6 +323,12 @@ void* ScreenRecoveryUI::ProgressThreadStartRoutine(void* data) {
     return nullptr;
 }
 
+void ScreenRecoveryUI::OMGRainbows()
+{
+    rainbow = rainbow ? false : true;
+    set_rainbow_mode(rainbow);
+}
+
 void ScreenRecoveryUI::ProgressThreadLoop() {
     double interval = 1.0 / animation_fps;
     while (true) {
@@ -506,18 +516,17 @@ void ScreenRecoveryUI::SetStage(int current, int max) {
     pthread_mutex_unlock(&updateMutex);
 }
 
-void ScreenRecoveryUI::Print(const char *fmt, ...) {
-    char buf[256];
-    va_list ap;
-    va_start(ap, fmt);
-    vsnprintf(buf, 256, fmt, ap);
-    va_end(ap);
+void ScreenRecoveryUI::PrintV(const char* fmt, bool copy_to_stdout, va_list ap) {
+    std::string str;
+    android::base::StringAppendV(&str, fmt, ap);
 
-    fputs(buf, stdout);
+    if (copy_to_stdout) {
+        fputs(str.c_str(), stdout);
+    }
 
     pthread_mutex_lock(&updateMutex);
     if (text_rows_ > 0 && text_cols_ > 0) {
-        for (const char* ptr = buf; *ptr != '\0'; ++ptr) {
+        for (const char* ptr = str.c_str(); *ptr != '\0'; ++ptr) {
             if (*ptr == '\n' || text_col_ >= text_cols_) {
                 text_[text_row_][text_col_] = '\0';
                 text_col_ = 0;
@@ -530,6 +539,20 @@ void ScreenRecoveryUI::Print(const char *fmt, ...) {
         update_screen_locked();
     }
     pthread_mutex_unlock(&updateMutex);
+}
+
+void ScreenRecoveryUI::Print(const char* fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    PrintV(fmt, true, ap);
+    va_end(ap);
+}
+
+void ScreenRecoveryUI::PrintOnScreenOnly(const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    PrintV(fmt, false, ap);
+    va_end(ap);
 }
 
 void ScreenRecoveryUI::PutChar(char ch) {
@@ -566,7 +589,7 @@ void ScreenRecoveryUI::ShowFile(FILE* fp) {
     bool show_prompt = false;
     while (true) {
         if (show_prompt) {
-            Print("--(%d%% of %d bytes)--",
+            PrintOnScreenOnly("--(%d%% of %d bytes)--",
                   static_cast<int>(100 * (double(ftell(fp)) / double(sb.st_size))),
                   static_cast<int>(sb.st_size));
             Redraw();
@@ -649,16 +672,40 @@ void ScreenRecoveryUI::StartMenu(const char* const * headers, const char* const 
 }
 
 int ScreenRecoveryUI::SelectMenu(int sel) {
+    int wrapped = 0;
     pthread_mutex_lock(&updateMutex);
     if (show_menu) {
         int old_sel = menu_sel;
         menu_sel = sel;
 
         // Wrap at top and bottom.
-        if (menu_sel < 0) menu_sel = menu_items - 1;
-        if (menu_sel >= menu_items) menu_sel = 0;
-
+        if (rainbow) {
+            if (menu_sel > old_sel) {
+                move_rainbow(1);
+            } else if (menu_sel < old_sel) {
+                move_rainbow(-1);
+            }
+        }
+        if (menu_sel < 0) {
+            wrapped = -1;
+            menu_sel = menu_items - 1;
+        }
+        if (menu_sel >= menu_items) {
+            wrapped = 1;
+            menu_sel = 0;
+        }
         sel = menu_sel;
+        if (wrapped != 0) {
+            if (wrap_count / wrapped > 0) {
+                wrap_count += wrapped;
+            } else {
+                wrap_count = wrapped;
+            }
+            if (wrap_count / wrapped >= 5) {
+                wrap_count = 0;
+                OMGRainbows();
+            }
+        }
         if (menu_sel != old_sel) update_screen_locked();
     }
     pthread_mutex_unlock(&updateMutex);

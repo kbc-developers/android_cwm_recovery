@@ -17,22 +17,21 @@ include $(CLEAR_VARS)
 # needed only for OTA packages.)
 LOCAL_MODULE_TAGS := eng
 
+LOCAL_CLANG := true
+
 LOCAL_SRC_FILES := $(updater_src_files)
 
-ifeq ($(TARGET_USERIMAGES_USE_EXT4), true)
-LOCAL_CFLAGS += -DUSE_EXT4
 LOCAL_CFLAGS += -Wno-unused-parameter
 LOCAL_C_INCLUDES += system/extras/ext4_utils
 LOCAL_STATIC_LIBRARIES += \
     libext4_utils_static \
     libsparse_static \
     libz
-endif
 
 LOCAL_STATIC_LIBRARIES += $(TARGET_RECOVERY_UPDATER_LIBS) $(TARGET_RECOVERY_UPDATER_EXTRA_LIBS)
 LOCAL_STATIC_LIBRARIES += libapplypatch libedify libmtdutils libminzip libz
 LOCAL_STATIC_LIBRARIES += libmincrypt libbz
-LOCAL_STATIC_LIBRARIES += libcutils liblog libstdc++ libc
+LOCAL_STATIC_LIBRARIES += libcutils liblog libc
 LOCAL_STATIC_LIBRARIES += libselinux
 tune2fs_static_libraries := \
  libext2_com_err \
