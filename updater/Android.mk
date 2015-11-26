@@ -28,9 +28,20 @@ LOCAL_STATIC_LIBRARIES += \
     libsparse_static \
     libz
 
+LOCAL_C_INCLUDES += external/e2fsprogs/lib
+LOCAL_STATIC_LIBRARIES += libext2_blkid libext2_uuid
+
+ifneq ($(BOARD_RECOVERY_BLDRMSG_OFFSET),)
+    LOCAL_CFLAGS += -DBOARD_RECOVERY_BLDRMSG_OFFSET=$(BOARD_RECOVERY_BLDRMSG_OFFSET)
+endif
+
+ifeq ($(BOARD_SUPPRESS_EMMC_WIPE),true)
+    LOCAL_CFLAGS += -DSUPPRESS_EMMC_WIPE
+endif
+
 LOCAL_STATIC_LIBRARIES += $(TARGET_RECOVERY_UPDATER_LIBS) $(TARGET_RECOVERY_UPDATER_EXTRA_LIBS)
 LOCAL_STATIC_LIBRARIES += libapplypatch libedify libmtdutils libminzip libz
-LOCAL_STATIC_LIBRARIES += libmincrypt libbz
+LOCAL_STATIC_LIBRARIES += libmincrypt libbz libxz
 LOCAL_STATIC_LIBRARIES += libcutils liblog libc
 LOCAL_STATIC_LIBRARIES += libselinux
 tune2fs_static_libraries := \

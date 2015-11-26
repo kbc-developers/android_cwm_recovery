@@ -33,6 +33,7 @@
 #include <sys/xattr.h>
 #include <linux/xattr.h>
 #include <inttypes.h>
+#include <blkid/blkid.h>
 
 #include "bootloader.h"
 #include "applypatch/applypatch.h"
@@ -167,6 +168,16 @@ Value* MountFn(const char* name, State* state, int argc, Expr* argv[]) {
         }
         result = mount_point;
     } else {
+        char *detected_fs_type = blkid_get_tag_value(NULL, "TYPE", location);
+        if (detected_fs_type) {
+            uiPrintf(state, "detected filesystem %s for %s\n",
+                    detected_fs_type, location);
+            fs_type = detected_fs_type;
+        } else {
+            uiPrintf(state, "could not detect filesystem for %s, assuming %s\n",
+                    location, fs_type);
+        }
+
         if (mount(location, mount_point, fs_type,
                   MS_NOATIME | MS_NODEV | MS_NODIRATIME,
                   has_mount_options ? mount_options : "") < 0) {
@@ -1484,10 +1495,11 @@ Value* ReadFileFn(const char* name, State* state, int argc, Expr* argv[]) {
 // current package (because nothing has cleared the copy of the
 // arguments stored in the BCB).
 //
-// The argument is the partition name passed to the android reboot
-// property.  It can be "recovery" to boot from the recovery
-// partition, or "" (empty string) to boot from the regular boot
-// partition.
+// The first argument is the block device for the misc partition
+// ("/misc" in the fstab).  The second argument is the argument
+// passed to the android reboot property.  It can be "recovery" to
+// boot from the recovery partition, or "" (empty string) to boot
+// from the regular boot partition.
 Value* RebootNowFn(const char* name, State* state, int argc, Expr* argv[]) {
     if (argc != 2) {
         return ErrorAbort(state, "%s() expects 2 args, got %d", name, argc);
@@ -1503,6 +1515,9 @@ Value* RebootNowFn(const char* name, State* state, int argc, Expr* argv[]) {
     memset(buffer, 0, sizeof(((struct bootloader_message*)0)->command));
     FILE* f = fopen(filename, "r+b");
     fseek(f, offsetof(struct bootloader_message, command), SEEK_SET);
+#ifdef BOARD_RECOVERY_BLDRMSG_OFFSET
+    fseek(f, BOARD_RECOVERY_BLDRMSG_OFFSET, SEEK_CUR);
+#endif
     fwrite(buffer, sizeof(((struct bootloader_message*)0)->command), 1, f);
     fclose(f);
     free(filename);
@@ -1513,6 +1528,11 @@ Value* RebootNowFn(const char* name, State* state, int argc, Expr* argv[]) {
     }
 
     property_set(ANDROID_RB_PROPERTY, buffer);
+
+    sleep(5);
+    // Attempt to reboot using older methods in case the recovery
+    // that we are updating does not support init reboots
+    android_reboot(ANDROID_RB_RESTART, 0, 0);
 
     sleep(5);
     free(property);
@@ -1545,6 +1565,9 @@ Value* SetStageFn(const char* name, State* state, int argc, Expr* argv[]) {
     // package installation.
     FILE* f = fopen(filename, "r+b");
     fseek(f, offsetof(struct bootloader_message, stage), SEEK_SET);
+#ifdef BOARD_RECOVERY_BLDRMSG_OFFSET
+    fseek(f, BOARD_RECOVERY_BLDRMSG_OFFSET, SEEK_CUR);
+#endif
     int to_write = strlen(stagestr)+1;
     int max_size = sizeof(((struct bootloader_message*)0)->stage);
     if (to_write > max_size) {
@@ -1571,6 +1594,9 @@ Value* GetStageFn(const char* name, State* state, int argc, Expr* argv[]) {
     char buffer[sizeof(((struct bootloader_message*)0)->stage)];
     FILE* f = fopen(filename, "rb");
     fseek(f, offsetof(struct bootloader_message, stage), SEEK_SET);
+#ifdef BOARD_RECOVERY_BLDRMSG_OFFSET
+    fseek(f, BOARD_RECOVERY_BLDRMSG_OFFSET, SEEK_CUR);
+#endif
     fread(buffer, sizeof(buffer), 1, f);
     fclose(f);
     buffer[sizeof(buffer)-1] = '\0';

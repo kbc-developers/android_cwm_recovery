@@ -41,15 +41,18 @@ LOCAL_SRC_FILES := \
     recovery.cpp \
     roots.cpp \
     screen_ui.cpp \
+    messagesocket.cpp \
     ui.cpp \
     verifier.cpp \
     wear_ui.cpp \
+    voldclient.cpp
 
 # External tools
 LOCAL_SRC_FILES += \
     ../../system/core/toolbox/newfs_msdos.c \
     ../../system/core/toolbox/start.c \
-    ../../system/core/toolbox/stop.c
+    ../../system/core/toolbox/stop.c \
+    ../../system/vold/vdc.c
 
 LOCAL_MODULE := recovery
 
@@ -67,6 +70,7 @@ LOCAL_C_INCLUDES += \
     system/vold \
     system/extras/ext4_utils \
     system/core/adb \
+    external/e2fsprogs/lib
 
 LOCAL_STATIC_LIBRARIES := \
     libext4_utils_static \
@@ -78,6 +82,7 @@ LOCAL_STATIC_LIBRARIES := \
     libminipigz_static \
     libzopfli \
     libreboot_static \
+    libsdcard \
     libminzip \
     libz \
     libmtdutils \
@@ -108,9 +113,28 @@ endif
 
 LOCAL_MODULE_PATH := $(TARGET_RECOVERY_ROOT_OUT)/sbin
 
+# Handling for EV_REL is disabled by default because some accelerometers
+# send EV_REL events.  Actual EV_REL devices are rare on modern hardware
+# so it's cleaner just to disable it by default.
+ifneq ($(BOARD_RECOVERY_NEEDS_REL_INPUT),)
+    LOCAL_CFLAGS += -DBOARD_RECOVERY_NEEDS_REL_INPUT
+endif
+
 ifeq ($(TARGET_USE_MDTP), true)
     LOCAL_CFLAGS += -DUSE_MDTP
 endif
+
+ifeq ($(BOARD_HAS_DOWNLOAD_MODE), true)
+    LOCAL_CFLAGS += -DDOWNLOAD_MODE
+endif
+
+ifneq ($(BOARD_RECOVERY_BLDRMSG_OFFSET),)
+    LOCAL_CFLAGS += -DBOARD_RECOVERY_BLDRMSG_OFFSET=$(BOARD_RECOVERY_BLDRMSG_OFFSET)
+endif
+
+LOCAL_CFLAGS += -DUSE_EXT4 -DMINIVOLD
+LOCAL_C_INCLUDES += system/extras/ext4_utils system/core/fs_mgr/include external/fsck_msdos
+LOCAL_C_INCLUDES += system/vold
 
 ifeq ($(TARGET_RECOVERY_UI_LIB),)
   LOCAL_SRC_FILES += default_device.cpp
@@ -124,21 +148,27 @@ LOCAL_C_INCLUDES += external/boringssl/include
 ifeq ($(ONE_SHOT_MAKEFILE),)
 LOCAL_ADDITIONAL_DEPENDENCIES += \
     fstools \
-    recovery_mkshrc
+    recovery_mkshrc \
+    minivold \
+    recovery_sgdisk
 
-ifneq ($(TARGET_RECOVERY_DEVICE_MODULES),)
-    LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_RECOVERY_DEVICE_MODULES)
 endif
-endif
+
+LOCAL_ADDITIONAL_DEPENDENCIES += \
+    bu_recovery
 
 TOYBOX_INSTLIST := $(HOST_OUT_EXECUTABLES)/toybox-instlist
 LOCAL_ADDITIONAL_DEPENDENCIES += toybox_recovery_links
 
 # Set up the static symlinks
 RECOVERY_TOOLS := \
-    gunzip gzip make_ext4fs reboot setup_adbd sh start stop toybox unzip zip
+    gunzip gzip make_ext4fs reboot setup_adbd sh start stop toybox unzip vdc zip
 LOCAL_POST_INSTALL_CMD := \
 	$(hide) $(foreach t,$(RECOVERY_TOOLS),ln -sf recovery $(TARGET_RECOVERY_ROOT_OUT)/sbin/$(t);)
+
+ifneq ($(TARGET_RECOVERY_DEVICE_MODULES),)
+    LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_RECOVERY_DEVICE_MODULES)
+endif
 
 include $(BUILD_EXECUTABLE)
 
@@ -160,6 +190,60 @@ LOCAL_MODULE_PATH := $(TARGET_RECOVERY_ROOT_OUT)/etc
 LOCAL_SRC_FILES := etc/mkshrc
 LOCAL_MODULE_STEM := mkshrc
 include $(BUILD_PREBUILT)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE := bu_recovery
+LOCAL_MODULE_STEM := bu
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_CLASS := RECOVERY_EXECUTABLES
+LOCAL_MODULE_PATH := $(TARGET_RECOVERY_ROOT_OUT)/sbin
+LOCAL_FORCE_STATIC_EXECUTABLE := true
+LOCAL_SRC_FILES := \
+    bu.cpp \
+    backup.cpp \
+    restore.cpp \
+    messagesocket.cpp \
+    roots.cpp \
+    voldclient.cpp
+LOCAL_CFLAGS += -DMINIVOLD
+LOCAL_CFLAGS += -Wno-unused-parameter
+#ifeq ($(TARGET_USERIMAGES_USE_EXT4), true)
+    LOCAL_CFLAGS += -DUSE_EXT4
+    LOCAL_C_INCLUDES += system/extras/ext4_utils
+    LOCAL_STATIC_LIBRARIES += libext4_utils_static libz
+#endif
+LOCAL_STATIC_LIBRARIES += \
+    libsparse_static \
+    libz \
+    libmtdutils \
+    libminadbd \
+    libminui \
+    libfs_mgr \
+    libtar \
+    libcrypto_static \
+    libselinux \
+    libutils \
+    libcutils \
+    liblog \
+    libm \
+    libc \
+    libext2_blkid \
+    libext2_uuid
+
+LOCAL_C_INCLUDES +=         	\
+    system/core/fs_mgr/include	\
+    system/core/include     	\
+    system/core/libcutils       \
+    system/vold                 \
+    external/libtar             \
+    external/libtar/listhash    \
+    external/openssl/include    \
+    external/zlib               \
+    bionic/libc/bionic          \
+    external/e2fsprogs/lib
+
+
+include $(BUILD_EXECUTABLE)
 
 # make_ext4fs
 include $(CLEAR_VARS)
@@ -219,17 +303,22 @@ LOCAL_MODULE := verifier_test
 LOCAL_FORCE_STATIC_EXECUTABLE := true
 LOCAL_MODULE_TAGS := tests
 LOCAL_CFLAGS += -Wno-unused-parameter
+LOCAL_CFLAGS += -DVERIFIER_TEST
 LOCAL_SRC_FILES := \
     verifier_test.cpp \
     asn1_decoder.cpp \
     verifier.cpp \
-    ui.cpp
+    ui.cpp \
+    messagesocket.cpp
 LOCAL_STATIC_LIBRARIES := \
     libmincrypt \
     libminui \
     libminzip \
     libcutils \
     libc
+LOCAL_C_INCLUDES += \
+    system/core/fs_mgr/include \
+    system/vold
 include $(BUILD_EXECUTABLE)
 
 

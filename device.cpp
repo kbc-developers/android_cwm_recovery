@@ -18,16 +18,22 @@
 
 static const char* MENU_ITEMS[] = {
     "Reboot system now",
+#ifdef DOWNLOAD_MODE
+    "Reboot to download mode",
+#else
     "Reboot to bootloader",
-    "Apply update from ADB",
-    "Apply update from SD card",
+#endif
+    "Apply update",
     "Wipe data/factory reset",
     "Wipe cache partition",
+    "Wipe media",
     "Mount /system",
     "View recovery logs",
     "Power off",
     NULL
 };
+
+extern int ui_root_menu;
 
 const char* const* Device::GetMenuItems() {
   return MENU_ITEMS;
@@ -37,10 +43,10 @@ Device::BuiltinAction Device::InvokeMenuItem(int menu_position) {
   switch (menu_position) {
     case 0: return REBOOT;
     case 1: return REBOOT_BOOTLOADER;
-    case 2: return APPLY_ADB_SIDELOAD;
-    case 3: return APPLY_SDCARD;
-    case 4: return WIPE_DATA;
-    case 5: return WIPE_CACHE;
+    case 2: return APPLY_UPDATE;
+    case 3: return WIPE_DATA;
+    case 4: return WIPE_CACHE;
+    case 5: return WIPE_MEDIA;
     case 6: return MOUNT_SYSTEM;
     case 7: return VIEW_RECOVERY_LOGS;
     case 8: return SHUTDOWN;
@@ -53,18 +59,35 @@ int Device::HandleMenuKey(int key, int visible) {
     return kNoAction;
   }
 
+  if (key & KEY_FLAG_ABS) {
+    return key;
+  }
+
   switch (key) {
+    case KEY_RIGHTSHIFT:
     case KEY_DOWN:
     case KEY_VOLUMEDOWN:
+    case KEY_MENU:
       return kHighlightDown;
 
+    case KEY_LEFTSHIFT:
     case KEY_UP:
     case KEY_VOLUMEUP:
+    case KEY_SEARCH:
       return kHighlightUp;
 
     case KEY_ENTER:
     case KEY_POWER:
+    case BTN_MOUSE:
+    case KEY_HOME:
+    case KEY_HOMEPAGE:
+    case KEY_SEND:
       return kInvokeItem;
+
+    case KEY_BACKSPACE:
+    case KEY_BACK:
+      if (!ui_root_menu)
+        return kGoBack;
 
     default:
       // If you have all of the above buttons, any other buttons

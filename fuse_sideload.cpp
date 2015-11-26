@@ -441,8 +441,6 @@ int run_fuse_sideload(struct provider_vtab* vtab, void* cookie,
                       uint64_t file_size, uint32_t block_size)
 {
     int result;
-    uint64_t mem = 0;
-    uint64_t avail = 0;
 
     // If something's already mounted on our mountpoint, try to remove
     // it.  (Mostly in case of a previous abnormal exit.)
@@ -464,6 +462,9 @@ int run_fuse_sideload(struct provider_vtab* vtab, void* cookie,
     fd.file_size = file_size;
     fd.block_size = block_size;
     fd.file_blocks = (file_size == 0) ? 0 : (((file_size-1) / block_size) + 1);
+
+    uint64_t mem = free_memory();
+    uint64_t avail = mem - (INSTALL_REQUIRED_MEMORY + fd.file_blocks * sizeof(uint8_t*));
 
     if (fd.file_blocks > (1<<18)) {
         fprintf(stderr, "file has too many blocks (%u)\n", fd.file_blocks);
@@ -499,8 +500,6 @@ int run_fuse_sideload(struct provider_vtab* vtab, void* cookie,
     fd.block_cache_max_size = 0;
     fd.block_cache_size = 0;
     fd.block_cache = NULL;
-    mem = free_memory();
-    avail = mem - (INSTALL_REQUIRED_MEMORY + fd.file_blocks * sizeof(uint8_t*));
     if (mem > avail) {
         uint32_t max_size = avail / fd.block_size;
         if (max_size > fd.file_blocks) {
@@ -548,13 +547,11 @@ int run_fuse_sideload(struct provider_vtab* vtab, void* cookie,
             continue;
         }
         ssize_t len = TEMP_FAILURE_RETRY(read(fd.ffd, request_buffer, sizeof(request_buffer)));
-        if (len < 0) {
-            if (errno != EINTR) {
-                perror("read request");
-                if (errno == ENODEV) {
-                    result = -1;
-                    break;
-                }
+        if (len == -1) {
+            perror("read request");
+            if (errno == ENODEV) {
+                result = -1;
+                break;
             }
             continue;
         }

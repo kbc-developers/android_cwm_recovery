@@ -52,10 +52,20 @@ class ScreenRecoveryUI : public RecoveryUI {
     void PrintOnScreenOnly(const char* fmt, ...) __printflike(2, 3);
     void ShowFile(const char* filename);
 
+    void DialogShowInfo(const char* text);
+    void DialogShowError(const char* text);
+    void DialogShowErrorLog(const char* text);
+    int  DialogShowing() const { return (dialog_text != NULL); }
+    bool DialogDismissable() const { return (dialog_icon == D_ERROR); }
+    void DialogDismiss();
+    void SetHeadlessMode();
+
     // menu display
+    virtual int MenuItemStart() const { return menu_item_start_; }
+    virtual int MenuItemHeight() const { return 3 * char_height_; }
     void StartMenu(const char* const * headers, const char* const * items,
                    int initial_selection);
-    int SelectMenu(int sel);
+    int SelectMenu(int sel, bool abs = false);
     void EndMenu();
 
     void KeyLongPress(int);
@@ -63,7 +73,7 @@ class ScreenRecoveryUI : public RecoveryUI {
     void Redraw();
 
     enum UIElement {
-        HEADER, MENU, MENU_SEL_BG, MENU_SEL_BG_ACTIVE, MENU_SEL_FG, LOG, TEXT_FILL, INFO
+        HEADER, MENU, MENU_SEL_BG, MENU_SEL_BG_ACTIVE, MENU_SEL_FG, LOG, TEXT_FILL, INFO, ERROR_TEXT
     };
     void SetColor(UIElement e);
 
@@ -74,8 +84,11 @@ class ScreenRecoveryUI : public RecoveryUI {
     bool rtl_locale;
 
     pthread_mutex_t updateMutex;
-    GRSurface* backgroundIcon[5];
-    GRSurface* backgroundText[5];
+    pthread_cond_t  progressCondition;
+
+    GRSurface* headerIcon;
+    GRSurface* backgroundIcon[NR_ICONS];
+    GRSurface* backgroundText[NR_ICONS];
     GRSurface** installation;
     GRSurface* progressBarEmpty;
     GRSurface* progressBarFill;
@@ -90,6 +103,7 @@ class ScreenRecoveryUI : public RecoveryUI {
     // true when both graphics pages are the same (except for the progress bar).
     bool pagesIdentical;
 
+    size_t log_text_cols_, log_text_rows_;
     size_t text_cols_, text_rows_;
 
     // Log text overlay, displayed when a magic key is pressed.
@@ -99,13 +113,22 @@ class ScreenRecoveryUI : public RecoveryUI {
     bool show_text;
     bool show_text_ever;   // has show_text ever been true?
 
+    Icon dialog_icon;
+    char *dialog_text;
+    bool dialog_show_log;
+
     char** menu_;
     const char* const* menu_headers_;
     bool show_menu;
     int menu_items, menu_sel;
 
+    int menu_show_start_;
+    int max_menu_rows_;
+
     // An alternate text screen, swapped with 'text_' when we're viewing a log file.
     char** file_viewer_text_;
+
+    int menu_item_start_;
 
     pthread_t progress_thread_;
 
@@ -119,11 +142,21 @@ class ScreenRecoveryUI : public RecoveryUI {
     bool rainbow;
     int wrap_count;
 
+    int log_char_height_, log_char_width_;
+    int char_height_, char_width_;
+
+    int header_height_, header_width_;
+    int text_first_row_;
+
+    bool update_waiting;
+
     void draw_background_locked(Icon icon);
     void draw_progress_locked();
+    int  draw_header_icon();
+    void draw_menu_item(int textrow, const char *text, int selected);
+    void draw_dialog();
     void draw_screen_locked();
     void update_screen_locked();
-    void update_progress_locked();
 
     static void* ProgressThreadStartRoutine(void* data);
     void ProgressThreadLoop();

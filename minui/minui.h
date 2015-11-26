@@ -45,6 +45,7 @@ void gr_fb_blank(bool blank);
 void gr_clear();  // clear entire surface to current color
 void gr_color(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
 void gr_fill(int x1, int y1, int x2, int y2);
+void gr_set_font(const char* name);
 void gr_text(int x, int y, const char *s, bool bold);
 void gr_texticon(int x, int y, GRSurface* icon);
 int gr_measure(const char *s);
@@ -67,6 +68,7 @@ typedef int (*ev_set_key_callback)(int code, int value, void* data);
 int ev_init(ev_callback input_cb, void* data);
 void ev_exit();
 int ev_add_fd(int fd, ev_callback cb, void* data);
+int ev_del_fd(int fd);
 void ev_iterate_available_keys(std::function<void(int)> f);
 int ev_sync_key_state(ev_set_key_callback set_key_cb, void* data);
 

@@ -81,7 +81,6 @@ static struct sideload_data sideload_data;
 #define ADB_INSTALL_TIMEOUT 300
 
 void *adb_sideload_thread(void* v) {
-
     pid_t child;
     if ((child = fork()) == 0) {
         execl("/sbin/recovery", "recovery", "--adbd", NULL);
@@ -156,6 +155,8 @@ void *adb_sideload_thread(void* v) {
 
 void
 start_sideload(RecoveryUI* ui_, bool* wipe_cache, const char* install_file) {
+    modified_flash = true;
+
     ui = ui_;
 
     stop_adbd();

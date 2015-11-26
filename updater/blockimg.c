@@ -341,7 +341,12 @@ static bool receive_new_data(const unsigned char* data, int size, void* cookie) 
 
 static void* unzip_new_data(void* cookie) {
     NewThreadInfo* nti = (NewThreadInfo*) cookie;
-    mzProcessZipEntryContents(nti->za, nti->entry, receive_new_data, nti);
+    if (strncmp(".xz", nti->entry->fileName + (nti->entry->fileNameLen - 3), 3) == 0) {
+        mzProcessZipEntryContentsXZ(nti->za, nti->entry, receive_new_data, nti);
+    } else {
+        mzProcessZipEntryContents(nti->za, nti->entry, receive_new_data, nti);
+    }
+
     return NULL;
 }
 
@@ -1521,10 +1526,12 @@ static int PerformCommandErase(CommandParameters* params) {
             // length in bytes
             blocks[1] = (tgt->pos[i * 2 + 1] - tgt->pos[i * 2]) * (uint64_t) BLOCKSIZE;
 
+#ifndef SUPPRESS_EMMC_WIPE
             if (ioctl(params->fd, BLKDISCARD, &blocks) == -1) {
                 fprintf(stderr, "BLKDISCARD ioctl failed: %s\n", strerror(errno));
                 goto pceout;
             }
+#endif
         }
     }
 
